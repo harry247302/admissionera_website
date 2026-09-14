@@ -172,7 +172,7 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
             </span>
             <span className="leading-tight">
               <span className="block text-[12px] font-semibold text-[#FF2D8E]">
-                AI-Powered
+                AI-Poweredasdvasd
               </span>
               <span className="block text-[11px] font-medium text-[#55556A]">
                 Compare in 2 mins

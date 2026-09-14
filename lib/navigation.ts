@@ -58,32 +58,7 @@ export const NAV_ITEMS: NavItem[] = [
       },
     ],
   },
-  {
-    label: "Tools",
-    href: "/tools",
-    children: [
-      {
-        label: "Course Finder",
-        href: "/tools/course-finder",
-        description: "Match programs to your interests and scores",
-      },
-      {
-        label: "University Comparator",
-        href: "/tools/compare",
-        description: "Compare fees, rankings and placements",
-      },
-      {
-        label: "College Predictor",
-        href: "/tools/predictor",
-        description: "Estimate likely admits from your profile",
-      },
-      {
-        label: "Career Tools",
-        href: "/tools/career",
-        description: "Explore paths, skills and outcomes",
-      },
-    ],
-  },
+ 
   {
     label: "About Us",
     href: "/about",

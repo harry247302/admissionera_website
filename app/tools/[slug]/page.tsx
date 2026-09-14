@@ -1,7 +1,11 @@
 import { InnerPage } from "@/components/InnerPage";
-import { CourseDiscovery } from "@/components/CourseDiscovery/CourseDiscovery";
 
 const COPY: Record<string, { title: string; description: string }> = {
+  "course-finder": {
+    title: "Course Finder",
+    description:
+      "Answer a few questions about your interests, scores and budget to see programs that are a strong fit.",
+  },
   compare: {
     title: "University Comparator",
     description:
@@ -25,15 +29,6 @@ export default async function ToolPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-
-  if (slug === "course-finder") {
-    return (
-      <main id="main" className="flex-1">
-        <CourseDiscovery />
-      </main>
-    );
-  }
-
   const page = COPY[slug] ?? {
     title: "Tools",
     description: "AdmissionEra decision tools for courses, universities and careers.",
