@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
         hostname: "cdn.collegevidya.com",
         pathname: "/home/**",
       },
+      {
+        protocol: "https",
+        hostname: "backend.admissionera.com",
+        pathname: "/uploads/**",
+      },
     ],
   },
 };

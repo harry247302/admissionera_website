@@ -7,7 +7,7 @@ import { ImpactSection } from "@/components/home/ImpactSection";
 import { TestimonialsSection } from "@/components/home/TestimonialsSection";
 import { CTASection } from "@/components/home/CTASection";
 import { BlogSection } from "@/components/home/BlogSection";
-import { InstitutionsSection } from "@/components/home/InstitutionsSection";
+import { TopUniversitiesSection } from "@/components/home/TopUniversitiesSection";
 
 export default function Home() {
   return (
@@ -19,11 +19,11 @@ export default function Home() {
       <BenefitsSection />
       <AboutSection />
       <CoursesSection />
+      <TopUniversitiesSection />
       <ImpactSection />
       <TestimonialsSection />
       <CTASection />
       <BlogSection />
-      <InstitutionsSection />
     </main>
   );
 }

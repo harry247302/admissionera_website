@@ -595,6 +595,74 @@ type ApiCourse = {
   university_code?: string | null;
   universityCode?: string | null;
   specializations?: Array<{ name?: string } | string>;
+  specialization_content_tables?: Array<{
+    title?: string;
+    rows?: Array<{
+      label?: string;
+      content?: Record<string, string> | string;
+      sort_order?: number;
+    }>;
+  }>;
+  faqs?: Array<{ id?: string }>;
+  course_content_paragraphs?: Array<{ id?: string }>;
+};
+
+function extractTableDetail(
+  tables: ApiCourse["specialization_content_tables"] = [],
+  labels: string[],
+) {
+  for (const table of tables || []) {
+    for (const row of table.rows || []) {
+      const hay = `${row.label || ""}`.toLowerCase();
+      if (!labels.some((label) => hay.includes(label.toLowerCase()))) continue;
+      const content =
+        typeof row.content === "string"
+          ? (() => {
+            try { return JSON.parse(row.content) as Record<string, string>; }
+            catch { return {}; }
+          })()
+          : (row.content || {});
+      return content.Details || content.Value || Object.values(content).find(Boolean) || "";
+    }
+  }
+  return "";
+}
+
+function parseFeeAmount(value: string) {
+  const nums = [...value.matchAll(/([\d,.]+)/g)]
+    .map((match) => Number(String(match[1]).replace(/,/g, "")))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  if (!nums.length) return 0;
+  return Math.min(...nums);
+}
+
+export type CourseFaq = {
+  id: string;
+  question: string;
+  answer: string;
+  display?: string | number;
+  is_active?: boolean;
+};
+
+export type CourseContentParagraph = {
+  id: string;
+  title: string;
+  content: string;
+  sort_order: number;
+};
+
+export type CourseContentTableRow = {
+  id: string;
+  label: string;
+  content: Record<string, string>;
+  sort_order: number;
+};
+
+export type CourseContentTable = {
+  id: string;
+  title: string;
+  sort_order: number;
+  rows: CourseContentTableRow[];
 };
 
 export type CourseDetail = {
@@ -617,6 +685,9 @@ export type CourseDetail = {
   status: string;
   universityName: string;
   universityCode: string;
+  faqs: CourseFaq[];
+  paragraphs: CourseContentParagraph[];
+  tables: CourseContentTable[];
 };
 
 function mapApiLevel(level?: string | null): CourseLevel {
@@ -682,6 +753,14 @@ export function mapApiCourseToDiscovery(row: ApiCourse, index = 0): DiscoveryCou
     .map((spec) => (typeof spec === "string" ? spec : spec?.name || ""))
     .filter(Boolean);
 
+  const tables = row.specialization_content_tables || [];
+  const durationFromTable = extractTableDetail(tables, ["duration"]);
+  const feeFromTable = extractTableDetail(tables, ["fee", "tuition"]);
+  const faqCount = Array.isArray(row.faqs) ? row.faqs.length : 0;
+  const paragraphCount = Array.isArray(row.course_content_paragraphs)
+    ? row.course_content_paragraphs.length
+    : 0;
+
   return {
     id: String(row.uuid || row.id || `${row.code || title}-${index}`),
     title,
@@ -689,14 +768,22 @@ export function mapApiCourseToDiscovery(row: ApiCourse, index = 0): DiscoveryCou
     category: mapApiCategory(row.department, title),
     level,
     studyMode,
-    duration: formatLabel(row.study_mode || row.studyMode) || "Flexible",
-    fee: 0,
+    duration: durationFromTable || formatLabel(row.study_mode || row.studyMode) || "Flexible",
+    fee: parseFeeAmount(feeFromTable),
     location: row.university_name || row.universityName || "India",
     specializations,
-    badge: formatLabel(row.level) || formatLabel(row.degree) || "Course",
-    badgeTone: BADGE_TONES_CYCLE[index % BADGE_TONES_CYCLE.length],
-    popularity: row.is_active === false || row.status === "INACTIVE" ? 40 : 80,
-    reviewed: specializations.length * 10,
+    badge:
+      specializations.length > 0
+        ? `${specializations.length}+ Specializations`
+        : formatLabel(row.study_mode || row.studyMode || row.attendance_mode) ||
+          formatLabel(row.degree) ||
+          "Course",
+    badgeTone:
+      specializations.length > 0
+        ? "pink"
+        : BADGE_TONES_CYCLE[index % BADGE_TONES_CYCLE.length],
+    popularity: row.is_active === false || row.status === "INACTIVE" ? 40 : 80 + faqCount,
+    reviewed: Math.max(specializations.length * 10, faqCount * 5, paragraphCount * 3),
     createdAt: row.created_at || row.createdAt || new Date().toISOString(),
     keywords: [
       title,
@@ -710,28 +797,67 @@ export function mapApiCourseToDiscovery(row: ApiCourse, index = 0): DiscoveryCou
   };
 }
 
-export function mapApiCourseToDetail(row: ApiCourse): CourseDetail {
+export function mapApiCourseToDetail(row: Record<string, unknown> = {}): CourseDetail {
+  const faqs = Array.isArray(row.faqs) ? (row.faqs as CourseFaq[]) : [];
+  const paragraphs = Array.isArray(row.course_content_paragraphs)
+    ? (row.course_content_paragraphs as CourseContentParagraph[])
+    : [];
+  const rawTables = Array.isArray(row.specialization_content_tables)
+    ? row.specialization_content_tables
+    : Array.isArray(row.course_content_tables)
+      ? row.course_content_tables
+      : [];
+
+  const tables: CourseContentTable[] = (rawTables as Array<Record<string, unknown>>).map((table) => ({
+    id: String(table.id || cryptoRandom()),
+    title: String(table.title || "Content Table"),
+    sort_order: Number(table.sort_order) || 0,
+    rows: (Array.isArray(table.rows) ? table.rows : []).map((rowItem: Record<string, unknown>, index: number) => {
+      const contentRaw = rowItem.content;
+      const content =
+        typeof contentRaw === "string"
+          ? (() => {
+            try { return JSON.parse(contentRaw) as Record<string, string>; }
+            catch { return {}; }
+          })()
+          : ((contentRaw || {}) as Record<string, string>);
+      return {
+        id: String(rowItem.id || `${index}`),
+        label: String(rowItem.label || ""),
+        content,
+        sort_order: Number(rowItem.sort_order) || index,
+      };
+    }),
+  }));
+
   return {
     id: String(row.uuid || row.id || ""),
-    name: row.name || row.degree || row.code || "Untitled Course",
-    code: row.code || "",
-    degree: row.degree || "",
-    level: formatLabel(row.level) || row.level || "",
-    description: row.description || "",
-    overview: row.overview || "",
-    eligibility: row.eligibility || "",
-    curriculum: row.curriculum || "",
-    careerOpportunities: row.careerOpportunities || row.career_opportunities || "",
-    department: row.department || "",
-    faculty: row.faculty || "",
-    studyMode: formatLabel(row.studyMode || row.study_mode) || "",
-    attendanceMode: formatLabel(row.attendanceMode || row.attendance_mode) || "",
-    language: row.language || "",
-    currency: row.currency || "INR",
-    status: row.status || (row.is_active === false ? "INACTIVE" : "ACTIVE"),
-    universityName: row.universityName || row.university_name || "",
-    universityCode: row.universityCode || row.university_code || "",
+    name: String(row.name || row.degree || row.code || "Untitled Course"),
+    code: String(row.code || ""),
+    degree: String(row.degree || ""),
+    level: formatLabel(String(row.level || "")) || String(row.level || ""),
+    description: String(row.description || ""),
+    overview: String(row.overview || ""),
+    eligibility: String(row.eligibility || ""),
+    curriculum: String(row.curriculum || ""),
+    careerOpportunities: String(row.careerOpportunities || row.career_opportunities || ""),
+    department: String(row.department || ""),
+    faculty: String(row.faculty || ""),
+    studyMode: formatLabel(String(row.studyMode || row.study_mode || "")) || "",
+    attendanceMode: formatLabel(String(row.attendanceMode || row.attendance_mode || "")) || "",
+    language: String(row.language || ""),
+    currency: String(row.currency || "INR"),
+    status: String(row.status || (row.is_active === false ? "INACTIVE" : "ACTIVE")),
+    universityName: String(row.universityName || row.university_name || ""),
+    universityCode: String(row.universityCode || row.university_code || ""),
+    faqs: faqs.filter((faq) => faq?.is_active !== false),
+    paragraphs: [...paragraphs].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
+    tables: [...tables].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
   };
+}
+
+function cryptoRandom() {
+  return `tmp-${Math.random().toString(36).slice(2)}`;
 }
 
 export async function fetchDiscoveryCourses(): Promise<DiscoveryCourse[]> {
@@ -745,10 +871,10 @@ export async function fetchDiscoveryCourses(): Promise<DiscoveryCourse[]> {
   }
 
   const payload = await res.json();
-  const rows: ApiCourse[] = Array.isArray(payload?.courses)
-    ? payload.courses
-    : Array.isArray(payload?.data)
-      ? payload.data
+  const rows: ApiCourse[] = Array.isArray(payload?.data)
+    ? payload.data
+    : Array.isArray(payload?.courses)
+      ? payload.courses
       : [];
 
   return rows
@@ -767,8 +893,7 @@ export async function fetchCourseById(id: string): Promise<CourseDetail> {
   }
 
   const payload = await res.json();
-  const row: ApiCourse | undefined = payload?.data || payload?.course;
-
+  const row = payload?.data || payload?.course;
   if (!row) {
     throw new Error("Course not found");
   }
