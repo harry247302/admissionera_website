@@ -8,19 +8,25 @@ export type HeroSlideData = {
 
 export const HERO_SLIDES: HeroSlideData[] = [
   {
-    id: "website-banner",
+    id: "guidance-mentors",
     title: "Online university guidance from trained mentors",
-    image: "https://cdn.collegevidya.com/home/website-banner.webp",
+    image: "/hero/banner-guidance.jpg",
     imagePosition: "center center",
-    alt: "Online university guidance from trained mentors",
+    alt: "AdmissionEra: Online University Guidance from trained mentors",
   },
   {
-    id: "brands-of-tomorrow",
-    title: "The story behind simplifying learners' decisions",
-    image:
-      "https://cdn.collegevidya.com/home/Brands_of_tomorrow_banner_web_copy.webp",
+    id: "top-universities",
+    title: "Get admission to top universities",
+    image: "/hero/banner-admission.jpg",
     imagePosition: "center center",
-    alt: "Brands of Tomorrow collaboration banner",
+    alt: "AdmissionEra: We help you get admission to top universities",
+  },
+  {
+    id: "dream-university",
+    title: "Your dream university is just a step away",
+    image: "/hero/banner-dream.jpg",
+    imagePosition: "center center",
+    alt: "AdmissionEra: Your dream university is just a step away",
   },
 ];
 

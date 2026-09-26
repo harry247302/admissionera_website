@@ -392,7 +392,7 @@ input {
   position: relative;
   width: 100%;
   overflow: hidden;
-  aspect-ratio: 1920 / 420;
+  aspect-ratio: 1024 / 341;
   min-height: 180px;
   outline: none;
 }
@@ -467,13 +467,13 @@ input {
 
 @media (min-width: 768px) {
   .hero-frame {
-    aspect-ratio: 1920 / 400;
+    aspect-ratio: 1024 / 341;
   }
 }
 
 @media (min-width: 1024px) {
   .hero-frame {
-    aspect-ratio: 1920 / 380;
+    aspect-ratio: 1024 / 341;
   }
 
   .hero-scrim {

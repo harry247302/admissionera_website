@@ -13,8 +13,8 @@ export function HeroSlide({ slide, preload = false, active = false }: HeroSlideP
       <Image
         src={slide.image}
         alt={slide.alt}
-        width={1920}
-        height={420}
+        width={1024}
+        height={341}
         preload={preload}
         sizes="100vw"
         className="block h-full w-full object-cover object-center"

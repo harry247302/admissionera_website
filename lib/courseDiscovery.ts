@@ -685,6 +685,7 @@ export type CourseDetail = {
   status: string;
   universityName: string;
   universityCode: string;
+  banner: string;
   faqs: CourseFaq[];
   paragraphs: CourseContentParagraph[];
   tables: CourseContentTable[];
@@ -850,6 +851,7 @@ export function mapApiCourseToDetail(row: Record<string, unknown> = {}): CourseD
     status: String(row.status || (row.is_active === false ? "INACTIVE" : "ACTIVE")),
     universityName: String(row.universityName || row.university_name || ""),
     universityCode: String(row.universityCode || row.university_code || ""),
+    banner: String(row.banner || row.cover || row.image || row.hero_image || ""),
     faqs: faqs.filter((faq) => faq?.is_active !== false),
     paragraphs: [...paragraphs].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
     tables: [...tables].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),

@@ -6,8 +6,12 @@ import Link from "next/link";
 import type {
   CourseContentTable,
   CourseDetail,
-  CourseFaq,
 } from "@/lib/courseDiscovery";
+import { resolveMediaUrl } from "@/lib/universities";
+import {
+  ContentRenderer,
+  FAQAccordion,
+} from "@/components/courses/CourseContentBlocks";
 
 const NAV_LINKS = [
   { id: "overview", label: "Overview" },
@@ -19,10 +23,10 @@ const NAV_LINKS = [
 ] as const;
 
 const FEATURE_META = [
-  { title: "Flexible Learning", match: /flexib|online mode|anytime/i },
-  { title: "Industry-Relevant Curriculum", match: /curriculum|subject|programming|market/i },
-  { title: "Recognised Credential", match: /ugc|aicte|deb|approv|recogn/i },
-  { title: "Career Progression", match: /career|professional|industr|skill/i },
+  { title: "Flexible Learning", tone: "bg-[#e8f1ff] text-[#2f6fed]", match: /flexib|online mode|anytime/i },
+  { title: "Industry-Relevant Curriculum", tone: "bg-[#e7f7f4] text-[#1aa58a]", match: /curriculum|subject|programming|market/i },
+  { title: "Recognised Degree", tone: "bg-[#f3e8ff] text-[#7c3aed]", match: /ugc|aicte|deb|approv|recogn/i },
+  { title: "Career Growth", tone: "bg-[#fff1e8] text-[#ea580c]", match: /career|professional|industr|skill/i },
 ] as const;
 
 function tableValue(
@@ -36,6 +40,33 @@ function tableValue(
   return values[values.length - 1] || row.label || "";
 }
 
+/** Column headers from row.content keys, preferring Key Features then Details. */
+function getTableColumns(rows: CourseContentTable["rows"] = []) {
+  const set = new Set<string>();
+  rows.forEach((row) => {
+    Object.keys(row.content || {}).forEach((key) => set.add(key));
+  });
+  const cols = [...set];
+  cols.sort((a, b) => {
+    const rank = (key: string) =>
+      (/key\s*feature/i.test(key) ? 0 : /detail/i.test(key) ? 1 : 2);
+    return rank(a) - rank(b) || a.localeCompare(b);
+  });
+  return cols.length ? cols : ["Key Features", "Details"];
+}
+
+function cellValue(
+  row: CourseContentTable["rows"][number],
+  column: string
+) {
+  const fromContent = row.content?.[column];
+  if (fromContent != null && String(fromContent).trim() !== "") {
+    return String(fromContent);
+  }
+  if (/key\s*feature/i.test(column)) return row.label || "—";
+  return tableValue(row) || "—";
+}
+
 function findSnapshotValue(tables: CourseContentTable[], labels: string[]) {
   for (const table of tables) {
     for (const row of table.rows || []) {
@@ -47,7 +78,6 @@ function findSnapshotValue(tables: CourseContentTable[], labels: string[]) {
   }
   return "";
 }
-
 function paragraphByTitle(course: CourseDetail, matchers: string[]) {
   return course.paragraphs.find((p) =>
     matchers.some((m) => p.title?.toLowerCase().includes(m.toLowerCase()))
@@ -197,52 +227,10 @@ function firstSentence(text = "") {
   return match?.[1] || cleaned.slice(0, 150);
 }
 
-function FaqAccordion({ faqs }: { faqs: CourseFaq[] }) {
-  const [openId, setOpenId] = useState<string | null>(faqs[0]?.id || null);
-  if (!faqs.length) return null;
-
-  return (
-    <div className="divide-y divide-[var(--line)] border-y border-[var(--line)]">
-      {faqs.map((faq) => {
-        const open = openId === faq.id;
-        return (
-          <div key={faq.id}>
-            <button
-              type="button"
-              className="flex w-full items-start justify-between gap-6 py-5 text-left transition hover:bg-[var(--surface)]/70"
-              onClick={() => setOpenId(open ? null : faq.id)}
-              aria-expanded={open}
-            >
-              <span className="text-[15px] font-semibold leading-6 text-navy">
-                {faq.question.replace(/^Q\d+\.\s*/i, "")}
-              </span>
-              <span
-                className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center text-brand transition duration-300 ${open ? "rotate-45" : ""}`}
-                aria-hidden
-              >
-                +
-              </span>
-            </button>
-            <div
-              className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
-            >
-              <div className="overflow-hidden">
-                <p className="pb-5 pr-10 text-sm leading-7 text-muted whitespace-pre-wrap">
-                  {faq.answer}
-                </p>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 export function CourseProgramPage({ course }: { course: CourseDetail }) {
+  console.log("course", course);
   const [activeSection, setActiveSection] = useState("overview");
   const [showAllCurriculum, setShowAllCurriculum] = useState(false);
-
   const aboutParagraph = paragraphByTitle(course, ["about"]);
   const featuresParagraph = paragraphByTitle(course, ["key feature", "feature"]);
   const eligibilityParagraph = paragraphByTitle(course, ["eligibility"]);
@@ -296,6 +284,8 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
           "System Analyst",
           "Database Administrator",
           "IT Consultant",
+          "Network Administrator",
+          "Cyber Security Analyst",
         ];
   }, [careersText]);
 
@@ -303,6 +293,7 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
     const lines = splitLines(featuresParagraph?.content || "");
     return FEATURE_META.map((meta, index) => ({
       title: meta.title,
+      tone: meta.tone,
       text:
         lines.find((line) => meta.match.test(line))
         || lines[index]
@@ -310,10 +301,12 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
     }));
   }, [featuresParagraph?.content]);
 
-  const curriculumRows = curriculumTable?.rows || [];
+  const curriculumRows = [...(curriculumTable?.rows || [])].sort(
+    (a, b) => (a.sort_order || 0) - (b.sort_order || 0)
+  );
   const visibleCurriculum = showAllCurriculum
     ? curriculumRows
-    : curriculumRows.slice(0, 8);
+    : curriculumRows.slice(0, 10);
 
   const breadcrumbLabel = shortProgramLabel(course);
   const displayTitle = course.code && !course.name.includes(`(${course.code})`)
@@ -325,6 +318,25 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
     : (course.degree || course.level || "Degree");
   const modeLabel = /online/i.test(mode) ? "Online Learning" : mode;
   const modeBadge = /online/i.test(mode) ? "Online Mode" : mode;
+  const heroBanner = resolveMediaUrl(course.banner) || "/hero/slide-2.png";
+  const heroHighlights = [
+    {
+      title: "Flexible Learning",
+      text: "Study anytime, anywhere",
+      tone: "teal",
+    },
+    {
+      title: "Industry Relevant Curriculum",
+      text: "Updated as per industry trends",
+      tone: "rose",
+    },
+    {
+      title: "Build Your Tech Career",
+      text: "With endless opportunities",
+      tone: "violet",
+    },
+  ] as const;
+  const activeFaqs = course.faqs.filter((faq) => faq?.is_active === true || faq?.is_active == null);
 
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
@@ -345,11 +357,21 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
 
   return (
     <main id="main" className="bg-white text-navy">
-      {/* Banner — matches design mock */}
-      <section className="relative overflow-hidden bg-[#f7f9fc]">
-        <div className="pointer-events-none absolute -right-10 top-10 h-72 w-72 rounded-full bg-[#dbe7ff]/70 blur-2xl" />
-        <div className="pointer-events-none absolute right-40 top-40 h-56 w-56 rounded-full bg-[#e8ddff]/60 blur-2xl" />
-        <div className="pointer-events-none absolute bottom-10 right-[28%] h-40 w-40 rounded-full bg-[#cfe0ff]/50 blur-xl" />
+      <section className="relative overflow-hidden bg-[#eef5ff]">
+        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[62%] lg:block">
+          <Image
+            src={heroBanner}
+            alt=""
+            fill
+            priority
+            unoptimized={heroBanner.startsWith("http")}
+            className="object-cover object-[68%_18%]"
+            sizes="62vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#eef5ff] via-[#eef5ff]/70 to-[#eef5ff]/10" />
+        </div>
+        <div className="pointer-events-none absolute -right-16 top-16 hidden h-72 w-72 rounded-full bg-[#d7e6ff]/80 blur-3xl lg:block" />
+        <div className="pointer-events-none absolute right-[22%] bottom-10 hidden h-48 w-48 rounded-full bg-[#e4d9ff]/70 blur-2xl lg:block" />
 
         <div className="era-shell relative pt-4 sm:pt-5">
           <nav className="flex flex-wrap items-center gap-2 text-[13px] text-slate-400" aria-label="Breadcrumb">
@@ -360,16 +382,17 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
             <span className="font-medium text-[#1e3a5f]">{breadcrumbLabel}</span>
           </nav>
 
-          <div className="grid items-center gap-10 pb-12 pt-8 lg:grid-cols-[1.08fr_0.92fr] lg:gap-8 lg:pb-16 lg:pt-10">
-            {/* Left content */}
+          <div className="relative pb-10 pt-8 lg:grid lg:grid-cols-[minmax(0,1.15fr)_260px] lg:items-center lg:gap-10 lg:pb-12 lg:pt-10">
             <div className="era-reveal max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#eef3f8] px-3.5 py-1.5 text-[12px] font-semibold text-[#1e3a5f]">
+              <div className="inline-flex flex-wrap items-center gap-2 rounded-full bg-white/80 px-3.5 py-1.5 text-[12px] font-semibold text-[#1e3a5f] shadow-sm ring-1 ring-white/70">
                 <span className="inline-flex items-center gap-1.5">
                   <DiamondIcon className="h-2.5 w-2.5 text-teal-500" />
                   {levelBadge(course.level)}
                 </span>
                 <span className="h-1 w-1 rounded-full bg-slate-300" aria-hidden />
                 <span>{modeBadge}</span>
+                <span className="h-1 w-1 rounded-full bg-slate-300" aria-hidden />
+                <span className="max-w-[220px] truncate sm:max-w-none">{recognition}</span>
               </div>
 
               <h1 className="mt-5 text-[2rem] font-extrabold tracking-[-0.04em] text-[#12263f] sm:text-4xl lg:text-[2.75rem] lg:leading-[1.15]">
@@ -378,6 +401,7 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
 
               <p className="mt-4 max-w-xl text-[15px] leading-7 text-slate-500 sm:text-base">
                 {heroLead}
+
               </p>
 
               <div className="mt-5 flex flex-wrap gap-2.5">
@@ -432,60 +456,53 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
               </div>
             </div>
 
-            {/* Right visual */}
-            <div className="era-reveal relative mx-auto w-full max-w-md lg:max-w-none" style={{ animationDelay: "100ms" }}>
-              <div className="pointer-events-none absolute -right-6 top-8 hidden h-64 w-64 rounded-[40%] bg-[#d9e6ff]/80 blur-xl lg:block" />
-              <div className="pointer-events-none absolute right-10 top-0 hidden h-48 w-48 rounded-[45%] bg-[#e6dbff]/70 blur-xl lg:block" />
-
+            <aside 
+            // className="relative z-10 mt-8 hidden w-full flex-col gap-3 justify-self-end lg:mt-0 lg:flex"
+            >
               <p
-                className="pointer-events-none absolute right-2 top-6 hidden rotate-[-12deg] text-[13px] font-medium tracking-wide text-slate-300 lg:block"
-                style={{ writingMode: "vertical-rl", fontFamily: "Georgia, 'Times New Roman', serif" }}
+                className="pointer-events-none absolute  font-medium tracking-wide text-slate-400"
+                style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
                 aria-hidden
               >
-                Learn Today Lead Tomorrow
+                Learn<br />Today<br />Lead<br />Tomorrow
               </p>
-
-              <div className="relative mx-auto aspect-[4/5] max-w-[420px] overflow-hidden rounded-[2rem] lg:ml-auto lg:mr-4">
-                <Image
-                  src="/hero/slide-2.png"
-                  alt={`${course.name} student learning online`}
-                  fill
-                  priority
-                  className="object-cover object-top"
-                  sizes="(max-width: 1024px) 90vw, 420px"
-                />
-              </div>
-
-              <div className="absolute left-0 top-10 hidden w-[190px] rounded-2xl bg-white p-3.5 shadow-[0_14px_40px_rgba(18,38,63,0.12)] sm:block lg:-left-2">
-                <div className="mb-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-teal-50 text-teal-600">
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
-                    <path d="M4 12a8 8 0 1 0 16 0" stroke="currentColor" strokeWidth="1.7" />
-                    <path d="M12 8v4l2.5 1.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                  </svg>
-                </div>
-                <p className="text-sm font-bold text-[#12263f]">Flexible Learning</p>
-                <p className="mt-0.5 text-[12px] text-slate-500">Study Anytime, Anywhere</p>
-              </div>
-
-              <div className="absolute bottom-16 right-0 hidden w-[200px] rounded-2xl bg-white p-3.5 shadow-[0_14px_40px_rgba(18,38,63,0.12)] sm:block lg:right-0">
-                <div className="mb-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-sky-50 text-sky-600">
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
-                    <path d="M12 3.5 19 6.2v5c0 4-2.8 7.3-7 8.3-4.2-1-7-4.3-7-8.3v-5L12 3.5Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-                    <path d="m9.2 11.8 1.9 1.9 3.7-3.8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-                <p className="text-sm font-bold text-[#12263f]">Build Your Tech Career</p>
-              </div>
-            </div>
+              {heroHighlights.map((item) => (
+                <article
+                  key={item.title}
+                  className=""
+                >
+                  <div className={` inline-flex items-center justify-center rounded-xl ${
+                    item.tone === "teal"
+                      ? "bg-teal-50 text-teal-600"
+                      : item.tone === "rose"
+                        ? "bg-rose-50 text-rose-500"
+                        : "bg-violet-50 text-violet-600"
+                  }`}>
+                    {item.tone === "teal" ? (
+                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
+                        <path d="M4 12a8 8 0 1 0 16 0" stroke="currentColor" strokeWidth="1.7" />
+                        <path d="M12 8v4l2.5 1.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                      </svg>
+                    ) : item.tone === "rose" ? (
+                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
+                        <rect x="5" y="6" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.7" />
+                        <path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <path d="M4 16.5 9 11l4 3.5 7-8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                  <p className="text-sm font-bold text-[#12263f]">{item.title}</p>
+                  <p className="mt-0.5 text-[12px] text-slate-500">{item.text}</p>
+                </article>
+              ))}
+            </aside>
           </div>
-        </div>
-      </section>
 
-      {/* Sticky nav + Overview section matching design */}
-      <section className="bg-[#f7f9fc] pb-14 pt-6 lg:pb-16 lg:pt-8">
-        <div className="era-shell">
           <nav
-            className="sticky top-3 z-30 overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-[#eef3f8]/95 px-2 py-1 shadow-[0_8px_24px_rgba(18,38,63,0.04)] backdrop-blur-md"
+            className="sticky top-3 z-30 overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-white/90 px-2 py-1 shadow-[0_8px_24px_rgba(18,38,63,0.06)] backdrop-blur-md"
             aria-label="Programme sections"
           >
             <div className="flex min-w-max gap-1">
@@ -510,8 +527,12 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
               })}
             </div>
           </nav>
+        </div>
+      </section>
 
-          <div id="overview" className="scroll-mt-28 mt-10 grid gap-8 lg:grid-cols-[1.35fr_0.85fr] lg:items-start lg:gap-10">
+      <section className="bg-[#f7f9fc] pb-14 pt-6 lg:pb-16 lg:pt-8">
+        <div className="era-shell">
+          <div id="overview" className="scroll-mt-28 grid gap-8 lg:grid-cols-[1.35fr_0.85fr] lg:items-start lg:gap-10">
             {/* Left: About + Overview table */}
             <div className="space-y-8">
               <div>
@@ -528,96 +549,88 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
                   )}
                 </div>
               </div>
-
-              {overviewTable?.rows?.length ? (
-                <div className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-[0_10px_30px_rgba(18,38,63,0.04)]">
-                  <div className="border-b border-[#eef2f6] px-5 py-4 sm:px-6">
-                    <h3 className="text-lg font-extrabold text-[#12263f] sm:text-xl">
-                      {overviewTable.title}
-                    </h3>
-                  </div>
-                  <table className="min-w-full text-sm">
-                    <tbody>
-                      {overviewTable.rows.map((row, index) => (
-                        <tr
-                          key={row.id}
-                          className={index % 2 === 1 ? "bg-[#f3f7fb]" : "bg-white"}
-                        >
-                          <th
-                            scope="row"
-                            className="w-[42%] px-4 py-3.5 text-left font-semibold text-[#12263f] sm:px-5"
-                          >
-                            <span className="inline-flex items-center gap-2.5">
-                              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#e8eef6]">
-                                <OverviewRowIcon label={row.label} />
-                              </span>
-                              {row.label}
-                            </span>
-                          </th>
-                          <td className="px-4 py-3.5 text-slate-600 sm:px-5">
-                            {tableValue(row)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : null}
             </div>
 
             {/* Right sidebar cards */}
             <aside className="space-y-5 lg:sticky lg:top-24">
-              <div className="rounded-2xl bg-[#e8f1ff] p-6 shadow-[0_10px_28px_rgba(18,38,63,0.05)]">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#2f6fed] text-white shadow-sm">
-                  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden>
-                    <path d="M4 9 12 5.5 20 9l-8 3.5L4 9Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-                    <path d="M7 11.5v4c0 .9 2.2 2.3 5 2.3s5-1.4 5-2.3v-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                  </svg>
+              <div className="rounded-[1.6rem] bg-[#eaf2ff] p-5 shadow-[0_10px_28px_rgba(18,38,63,0.05)] sm:p-6">
+                <div className="flex items-start gap-4">
+                  <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#dce9ff] text-[#2f6fed]">
+                    <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" aria-hidden>
+                      <circle cx="9" cy="8" r="2.4" stroke="currentColor" strokeWidth="1.7" />
+                      <circle cx="16" cy="9" r="2" stroke="currentColor" strokeWidth="1.7" />
+                      <path d="M4.5 17.5c.8-2.6 2.4-3.9 4.5-3.9s3.7 1.3 4.5 3.9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                      <path d="M14 14.2c1.4-.4 2.7-.2 4.2 1.6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="text-xl font-extrabold leading-snug text-[#12263f]">Get Free Counselling</h3>
+                    <p className="mt-1 text-sm leading-6 text-slate-500">
+                      Talk to our experts and get guidance on admissions, eligibility and fees.
+                    </p>
+                  </div>
                 </div>
-                <h3 className="mt-4 text-xl font-extrabold text-[#12263f]">Get Free Counselling</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Talk to our experts and get guidance on admissions, eligibility and fees.
-                </p>
                 <Link
                   href="/tools/course-finder"
-                  className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#12263f] px-5 text-sm font-bold text-white transition hover:bg-[#1a3354]"
+                  className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#12263f] px-5 text-sm font-bold text-white transition hover:bg-[#1a3354]"
                 >
                   Book a Free Call
                   <span aria-hidden>→</span>
                 </Link>
               </div>
 
-              <div className="overflow-hidden rounded-2xl bg-[#eef3f8] shadow-[0_10px_28px_rgba(18,38,63,0.05)]">
-                <div className="px-6 pt-6">
-                  <h3 className="max-w-[16ch] text-xl font-extrabold leading-snug tracking-[-0.02em] text-[#12263f]">
+              <div className="relative min-h-[325px] overflow-hidden rounded-[18px] bg-[#EAF3FF] pb-[208px] sm:min-h-[340px] sm:pb-[200px]">
+                <div className="absolute right-0 top-0 z-[1] h-[190px] w-[150px] sm:h-[210px] sm:w-[170px] lg:h-[220px] lg:w-[180px]">
+                  <Image
+                    src="/hero/boy.png"
+                    alt="Student preparing for a technology career"
+                    fill
+                    sizes="180px"
+                    className="object-contain object-right-top"
+                  />
+                </div>
+
+                <div className="relative z-10 px-5 pt-5">
+                  <h3 className="max-w-[145px] text-[18px] font-extrabold leading-[1.15] tracking-[-0.03em] text-[#12263f] sm:text-[20px] lg:text-[21px]">
                     Turn Your Passion for Technology into a Bright Career
                   </h3>
+                  <span className="mt-3 block h-[3px] w-8 rounded-full bg-[#2f6fed]" aria-hidden />
                 </div>
-                <div className="relative mt-4 px-4">
-                  <div className="relative aspect-[5/4] overflow-hidden rounded-xl">
-                    <Image
-                      src="/hero/slide-1.png"
-                      alt="Student preparing for a technology career"
-                      fill
-                      className="object-cover object-top"
-                      sizes="360px"
-                    />
-                  </div>
-                </div>
-                <div className="p-4 pt-3">
-                  <ul className="space-y-3 rounded-xl bg-white p-4 text-sm font-medium text-[#12263f] shadow-sm">
+
+                <div className="absolute inset-x-4 bottom-4 z-20 rounded-[16px] bg-white p-3.5 shadow-[0_8px_22px_rgba(18,38,63,0.08)]">
+                  <ul className="space-y-3 text-[13px] font-bold leading-5 text-[#12263f] sm:text-sm sm:leading-5">
                     {[
-                      "Industry Relevant Curriculum",
-                      "Learn from Anywhere",
-                      "Career Support & Guidance",
+                      { label: "Industry Relevant Curriculum", icon: "monitor" },
+                      { label: "Learn from Anywhere", icon: "pin" },
+                      { label: "Career Support & Guidance", icon: "support" },
+                      { label: "Access to Updated Resources", icon: "people" },
                     ].map((item) => (
-                      <li key={item} className="flex items-center gap-2.5">
-                        <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-600">
-                          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden>
-                            <path d="m7 12.5 3 3 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
+                      <li key={item.label} className="flex items-start gap-3">
+                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E7F7F4] text-[#1AA58A]">
+                          {item.icon === "monitor" ? (
+                            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
+                              <rect x="4" y="5" width="16" height="11" rx="2" stroke="currentColor" strokeWidth="1.7" />
+                              <path d="M8 19h8M12 16v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                            </svg>
+                          ) : item.icon === "pin" ? (
+                            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
+                              <path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10Z" stroke="currentColor" strokeWidth="1.7" />
+                              <circle cx="12" cy="11" r="1.8" stroke="currentColor" strokeWidth="1.7" />
+                            </svg>
+                          ) : item.icon === "support" ? (
+                            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
+                              <path d="M8 12.5 10.2 9l2.3 3 2.2-4 3.3 4.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M4 16.5h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                            </svg>
+                          ) : (
+                            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
+                              <circle cx="9" cy="8.5" r="2.2" stroke="currentColor" strokeWidth="1.7" />
+                              <circle cx="16" cy="9.2" r="1.8" stroke="currentColor" strokeWidth="1.7" />
+                              <path d="M4.8 17c.7-2.3 2.2-3.4 4.2-3.4s3.5 1.1 4.2 3.4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                            </svg>
+                          )}
                         </span>
-                        {item}
+                        <span className="min-w-0 pt-1.5">{item.label}</span>
                       </li>
                     ))}
                   </ul>
@@ -627,193 +640,222 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
           </div>
         </div>
       </section>
+      
+      {/* Paragraphs: title + content only */}
+      {course.paragraphs?.length > 0 ? (
+        <section className="bg-white py-12 lg:py-16">
+          <div className="era-shell space-y-12 lg:space-y-14">
+            {course.paragraphs
+              .filter((p) => !/about/i.test(p.title || ""))
+              .map((paragraph) => {
+                const title = paragraph.title || "";
+                const sectionId = /key feature|feature/i.test(title)
+                  ? "features"
+                  : /eligib/i.test(title)
+                    ? "eligibility"
+                    : /career/i.test(title)
+                      ? "careers"
+                      : undefined;
 
-      {/* Features */}
-      <section id="features" className="scroll-mt-24 border-b border-[var(--line)] bg-white">
-        <div className="era-shell py-16 lg:py-20">
-          <div className="max-w-2xl">
-            <p className="text-[11px] font-bold tracking-[0.18em] text-brand uppercase">Why this programme</p>
-            <h2 className="mt-3 text-3xl font-bold tracking-[-0.03em] text-navy sm:text-[2.1rem]">
-              {featuresParagraph?.title || "Key Features"}
-            </h2>
-            <p className="mt-4 text-[15px] leading-7 text-muted">
-              Designed for clarity, flexibility and career outcomes — without unnecessary complexity.
-            </p>
-          </div>
-
-          <div className="mt-10 grid gap-px bg-[var(--line)] sm:grid-cols-2 lg:grid-cols-4">
-            {featureCards.map((card, index) => (
-              <article
-                key={card.title}
-                className="group bg-white p-6 transition duration-300 hover:bg-[var(--surface)] sm:p-7"
-              >
-                <p className="text-[11px] font-bold tracking-[0.16em] text-brand/70">
-                  {String(index + 1).padStart(2, "0")}
-                </p>
-                <h3 className="mt-4 text-base font-bold text-navy">{card.title}</h3>
-                <p className="mt-3 text-sm leading-6 text-muted line-clamp-5">{card.text}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Eligibility */}
-      {(eligibilityParagraph?.content || course.eligibility) && (
-        <section id="eligibility" className="scroll-mt-24 border-b border-[var(--line)] bg-[var(--surface)]">
-          <div className="era-shell grid gap-10 py-16 lg:grid-cols-[0.85fr_1.15fr] lg:py-20">
-            <div>
-              <p className="text-[11px] font-bold tracking-[0.18em] text-brand uppercase">Admission</p>
-              <h2 className="mt-3 text-3xl font-bold tracking-[-0.03em] text-navy sm:text-[2.1rem]">
-                {eligibilityParagraph?.title || "Eligibility Criteria"}
-              </h2>
-            </div>
-            <div className="border border-[var(--line)] bg-white p-7 sm:p-9">
-              <p className="text-[15px] leading-7 text-muted whitespace-pre-wrap">
-                {eligibilityParagraph?.content || course.eligibility}
-              </p>
-            </div>
+                return (
+                  <article
+                    key={paragraph.id}
+                    id={sectionId}
+                    className={sectionId ? "scroll-mt-28" : undefined}
+                  >
+                    <h2 className="text-2xl font-extrabold tracking-[-0.03em] text-[#12263f] sm:text-[1.85rem]">
+                      {paragraph.title}
+                    </h2>
+                    <div className="mt-4 max-w-4xl">
+                      <ContentRenderer content={paragraph.content} />
+                    </div>
+                  </article>
+                );
+              })}
           </div>
         </section>
-      )}
+      ) : null}
 
-      {/* Curriculum */}
-      {curriculumRows.length > 0 && (
-        <section id="curriculum" className="scroll-mt-24 border-b border-[var(--line)] bg-white">
-          <div className="era-shell py-16 lg:py-20">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div className="max-w-2xl">
-                <p className="text-[11px] font-bold tracking-[0.18em] text-brand uppercase">Curriculum</p>
-                <h2 className="mt-3 text-3xl font-bold tracking-[-0.03em] text-navy sm:text-[2.1rem]">
-                  {curriculumTable?.title || "Programme Structure"}
-                </h2>
-                <p className="mt-4 text-[15px] leading-7 text-muted">
-                  A structured learning path covering foundational and advanced computer application subjects.
-                </p>
-              </div>
-              {curriculumRows.length > 8 && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllCurriculum((v) => !v)}
-                  className="inline-flex min-h-11 items-center justify-center border border-[var(--line)] bg-white px-5 text-sm font-semibold text-navy transition hover:border-brand hover:text-brand"
-                >
-                  {showAllCurriculum ? "Show less" : "View full curriculum"}
-                </button>
-              )}
-            </div>
 
-            <ol className="mt-10 grid gap-3 md:grid-cols-2">
-              {visibleCurriculum.map((row, index) => (
-                <li
-                  key={row.id}
-                  className="flex items-start gap-4 border border-[var(--line)] bg-[var(--surface)]/40 px-5 py-4 transition duration-300 hover:border-brand/30 hover:bg-white"
+      {/* Content tables: Key Features | Details columns */}
+      {course.tables?.length > 0 ? (
+        <section className="bg-[#f7f9fc] py-12 lg:py-16">
+          <div className="era-shell space-y-10">
+            {course.tables.map((table, tableIndex) => {
+              const rows = [...(table.rows || [])].sort(
+                (a, b) => (a.sort_order || 0) - (b.sort_order || 0)
+              );
+              if (!rows.length) return null;
+
+              const columns = getTableColumns(rows);
+              const sectionId =
+                tableIndex === 0
+                  ? "overview"
+                  : /curriculum|semester|syllabus/i.test(table.title || "")
+                    ? "curriculum"
+                    : undefined;
+
+              return (
+                <div
+                  key={table.id}
+                  id={sectionId}
+                  className={sectionId ? "scroll-mt-28" : undefined}
                 >
-                  <span className="mt-0.5 text-xs font-bold tracking-wide text-brand">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-navy">
-                      {row.label || `Module ${index + 1}`}
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-muted">{tableValue(row)}</p>
+                  <h2 className="text-2xl font-extrabold tracking-[-0.03em] text-[#12263f] sm:text-[1.85rem]">
+                    {table.title}
+                  </h2>
+
+                  <div className="mt-5 overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-[0_10px_30px_rgba(18,38,63,0.04)]">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="bg-[#f3f7fb] text-left">
+                            {columns.map((column) => (
+                              <th
+                                key={column}
+                                className="px-4 py-3.5 font-bold text-[#12263f] sm:px-5"
+                              >
+                                {column}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map((row, index) => (
+                            <tr
+                              key={row.id}
+                              className={
+                                index % 2 === 1 ? "bg-[#f3f7fb]" : "bg-white"
+                              }
+                            >
+                              {columns.map((column, colIndex) => {
+                                const value = cellValue(row, column);
+                                const isLabelCol =
+                                  colIndex === 0 || /key\s*feature/i.test(column);
+
+                                return (
+                                  <td
+                                    key={column}
+                                    className={`px-4 py-3.5 sm:px-5 ${
+                                      isLabelCol
+                                        ? "font-semibold text-[#12263f]"
+                                        : "text-slate-600"
+                                    }`}
+                                  >
+                                    {isLabelCol ? (
+                                      <span className="inline-flex items-center gap-2.5">
+                                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#e8eef6]">
+                                          <OverviewRowIcon
+                                            label={row.label || value}
+                                          />
+                                        </span>
+                                        {value}
+                                      </span>
+                                    ) : (
+                                      value
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </li>
-              ))}
-            </ol>
+                </div>
+              );
+            })}
           </div>
         </section>
-      )}
-
-      {/* Careers */}
-      <section id="careers" className="scroll-mt-24 border-b border-[var(--line)] bg-[var(--surface)]">
-        <div className="era-shell grid items-center gap-12 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:py-20">
-          <div>
-            <p className="text-[11px] font-bold tracking-[0.18em] text-brand uppercase">Outcomes</p>
-            <h2 className="mt-3 text-3xl font-bold tracking-[-0.03em] text-navy sm:text-[2.1rem]">
-              Career Opportunities
-            </h2>
-            <p className="mt-4 max-w-xl text-[15px] leading-7 text-muted">
-              Graduates of {breadcrumbLabel} can pursue roles across software, analytics, infrastructure and digital services.
-            </p>
-            <ul className="mt-8 grid gap-3 sm:grid-cols-2">
-              {careerOptions.map((role) => (
-                <li
-                  key={role}
-                  className="flex items-center gap-3 border border-[var(--line)] bg-white px-4 py-3 text-sm font-medium text-navy"
+      ) : null}
+      {/* Careers + FAQs */}
+      <section className="bg-[#f7f9fc] py-12 lg:py-16 scroll-mt-28">
+        <div className="">
+       
+        {activeFaqs.length > 0 ? (
+            <div id="faqs" className="scroll-mt-28">
+              <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h2 className="text-2xl font-extrabold tracking-[-0.03em] text-[#12263f] sm:text-[1.85rem]">
+                    Frequently Asked Questions
+                  </h2>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Quick answers about {course.name}.
+                  </p>
+                </div>
+                <a
+                  href="#faqs"
+                  className="text-sm font-bold text-[#2563eb] transition hover:text-[#1d4ed8]"
                 >
-                  <span className="h-1.5 w-1.5 shrink-0 bg-brand" aria-hidden />
-                  <span className="truncate">{role}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="relative aspect-[4/5] overflow-hidden sm:aspect-[5/4] lg:aspect-[4/5]">
-            <Image
-              src="/hero/slide-3.png"
-              alt="Career pathways after programme completion"
-              fill
-              className="object-cover"
-              sizes="(max-width: 1024px) 100vw, 420px"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-navy/55 via-navy/10 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-6 text-white">
-              <p className="text-sm font-semibold">Build a future-ready technology profile</p>
-              <p className="mt-1 text-xs leading-5 text-white/80">
-                Skills aligned with hiring needs across leading industries.
-              </p>
+                  View All FAQs →
+                </a>
+              </div>
+              <FAQAccordion faqs={activeFaqs.slice(0, 4)} />
             </div>
-          </div>
+          ) : null}
+
         </div>
       </section>
 
-      {/* FAQs */}
-      {course.faqs.length > 0 && (
-        <section id="faqs" className="scroll-mt-24 border-b border-[var(--line)] bg-white">
-          <div className="era-shell grid gap-10 py-16 lg:grid-cols-[0.85fr_1.15fr] lg:py-20">
-            <div>
-              <p className="text-[11px] font-bold tracking-[0.18em] text-brand uppercase">Support</p>
-              <h2 className="mt-3 text-3xl font-bold tracking-[-0.03em] text-navy sm:text-[2.1rem]">
-                Frequently Asked Questions
-              </h2>
-              <p className="mt-4 text-[15px] leading-7 text-muted">
-                Clear answers to help you decide with confidence.
-              </p>
-            </div>
-            <FaqAccordion faqs={course.faqs} />
-          </div>
-        </section>
-      )}
-
-      {/* Closing CTA */}
-      <section className="bg-[var(--surface)] py-16 lg:py-20">
+      {/* Bottom CTA */}
+      <section className="bg-white py-12 lg:py-16">
         <div className="era-shell">
-          <div className="relative overflow-hidden bg-navy px-7 py-12 text-white sm:px-12 lg:px-16 lg:py-16">
-            <div className="pointer-events-none absolute -right-16 top-0 h-56 w-56 rounded-full bg-brand/30 blur-3xl" />
-            <div className="pointer-events-none absolute bottom-0 left-1/3 h-40 w-40 rounded-full bg-white/5 blur-2xl" />
-            <div className="relative max-w-2xl">
-              <p className="text-[11px] font-bold tracking-[0.18em] text-white/55 uppercase">
-                Next step
-              </p>
-              <h2 className="mt-3 text-3xl font-bold tracking-[-0.03em] sm:text-[2.25rem]">
-                Start your journey with expert guidance
-              </h2>
-              <p className="mt-4 text-[15px] leading-7 text-white/75">
-                Compare universities, understand fees, and apply to {breadcrumbLabel} with AdmissionEra counselling support.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link
-                  href="/tools/course-finder"
-                  className="inline-flex min-h-12 items-center justify-center bg-white px-6 text-sm font-semibold text-navy transition hover:bg-brand-soft"
+          <div className="relative overflow-hidden rounded-[24px] border border-[#e2e8f0] bg-[#eaf2ff] px-7 py-12 sm:px-12 lg:px-16 lg:py-14">
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[0.35]"
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(-45deg, transparent, transparent 18px, rgba(47,111,237,0.08) 18px, rgba(47,111,237,0.08) 19px)",
+              }}
+              aria-hidden
+            />
+            <div className="relative grid items-center gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+              <div>
+                <h2 className="max-w-xl text-2xl font-extrabold tracking-[-0.03em] text-[#12263f] sm:text-[2rem]">
+                  Start Your Journey Towards a Successful Career
+                </h2>
+                <p className="mt-3 max-w-lg text-[15px] leading-7 text-slate-600">
+                  Get free counselling, compare universities, and apply to {breadcrumbLabel} with expert support.
+                </p>
+                <div className="mt-7 flex flex-wrap gap-3">
+                  <Link
+                    href="/tools/course-finder"
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#12263f] px-6 text-sm font-bold text-white transition hover:bg-[#1a3354]"
+                  >
+                    Apply Now
+                    <span aria-hidden>→</span>
+                  </Link>
+                  <Link
+                    href="/tools/course-finder"
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#c9d2de] bg-white px-6 text-sm font-bold text-[#12263f] transition hover:border-[#12263f]"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
+                      <path d="M5 10v2a7 7 0 0 0 14 0v-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      <path d="M8 10V8a4 4 0 0 1 8 0v2" stroke="currentColor" strokeWidth="1.8" />
+                      <path d="M4 11h2v3H4zM18 11h2v3h-2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                    </svg>
+                    Talk to an Expert
+                  </Link>
+                </div>
+              </div>
+              <div className="relative mx-auto hidden h-44 w-full max-w-xs lg:block">
+                <div className="absolute inset-0 overflow-hidden rounded-[1.5rem] border border-[#e2e8f0] bg-white">
+                  <Image
+                    src="/hero/slide-1.png"
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="240px"
+                  />
+                </div>
+                <p
+                  className="pointer-events-none absolute -right-2 bottom-3 text-sm font-medium text-[#64748b]"
+                  style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                  aria-hidden
                 >
-                  Apply Now
-                </Link>
-                <Link
-                  href="/tools/course-finder"
-                  className="inline-flex min-h-12 items-center justify-center border border-white/25 px-6 text-sm font-semibold text-white transition hover:border-white hover:bg-white/5"
-                >
-                  Talk to an Expert
-                </Link>
+                  Your Future Awaits
+                </p>
               </div>
             </div>
           </div>
