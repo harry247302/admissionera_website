@@ -231,6 +231,7 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
   console.log("course", course);
   const [activeSection, setActiveSection] = useState("overview");
   const [showAllCurriculum, setShowAllCurriculum] = useState(false);
+  const [showAllFaqs, setShowAllFaqs] = useState(false);
   const aboutParagraph = paragraphByTitle(course, ["about"]);
   const featuresParagraph = paragraphByTitle(course, ["key feature", "feature"]);
   const eligibilityParagraph = paragraphByTitle(course, ["eligibility"]);
@@ -769,34 +770,73 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
           </div>
         </section>
       ) : null}
-      {/* Careers + FAQs */}
-      <section className="bg-[#f7f9fc] py-12 lg:py-16 scroll-mt-28">
-        <div className="">
-       
-        {activeFaqs.length > 0 ? (
-            <div id="faqs" className="scroll-mt-28">
-              <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <h2 className="text-2xl font-extrabold tracking-[-0.03em] text-[#12263f] sm:text-[1.85rem]">
-                    Frequently Asked Questions
-                  </h2>
-                  <p className="mt-2 text-sm text-slate-600">
-                    Quick answers about {course.name}.
-                  </p>
-                </div>
-                <a
-                  href="#faqs"
-                  className="text-sm font-bold text-[#2563eb] transition hover:text-[#1d4ed8]"
-                >
-                  View All FAQs →
-                </a>
-              </div>
-              <FAQAccordion faqs={activeFaqs.slice(0, 4)} />
-            </div>
-          ) : null}
+      {/* FAQs */}
+      {activeFaqs.length > 0 ? (
+        <section id="faqs" className="scroll-mt-28 bg-[#f7f9fc] py-12 lg:py-16">
+          <div className="era-shell grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12">
+            <aside className="lg:sticky lg:top-24 lg:self-start">
+              <span className="inline-flex rounded-full bg-[#e8eef6] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#2f6fed]">
+                Got Questions?
+              </span>
+              <h2 className="mt-3 text-2xl font-extrabold tracking-[-0.03em] text-[#12263f] sm:text-[1.85rem]">
+                Frequently Asked Questions
+              </h2>
+              <p className="mt-3 text-[15px] leading-7 text-slate-600">
+                Clear answers about admissions, eligibility, fees and career outcomes for {breadcrumbLabel}.
+              </p>
 
-        </div>
-      </section>
+              <div className="mt-6 flex items-center gap-3 rounded-2xl border border-[#e2e8f0] bg-white p-4">
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eaf2ff] text-lg font-extrabold text-[#2563eb]">
+                  {activeFaqs.length}
+                </span>
+                <p className="text-sm leading-5 text-slate-600">
+                  <span className="block font-bold text-[#12263f]">Answered questions</span>
+                  Curated by our admission experts
+                </p>
+              </div>
+
+              <div className="mt-4 rounded-2xl bg-[#12263f] p-5 text-white shadow-[0_10px_30px_rgba(18,38,63,0.15)]">
+                <h3 className="text-base font-extrabold">Still have questions?</h3>
+                <p className="mt-1 text-sm leading-6 text-slate-300">
+                  Talk to a counsellor for personalised guidance — it&apos;s free.
+                </p>
+                <Link
+                  href="/tools/course-finder"
+                  className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-bold text-[#12263f] transition hover:bg-slate-100"
+                >
+                  Talk to an Expert
+                  <span aria-hidden>→</span>
+                </Link>
+              </div>
+            </aside>
+
+            <div>
+              <FAQAccordion faqs={showAllFaqs ? activeFaqs : activeFaqs.slice(0, 5)} />
+              {activeFaqs.length > 5 ? (
+                <div className="mt-5 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllFaqs((prev) => !prev)}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#c9d2de] bg-white px-6 text-sm font-bold text-[#12263f] transition hover:border-[#12263f]"
+                  >
+                    {showAllFaqs
+                      ? "Show fewer questions"
+                      : `View all ${activeFaqs.length} questions`}
+                    <svg
+                      viewBox="0 0 24 24"
+                      className={`h-4 w-4 transition-transform ${showAllFaqs ? "rotate-180" : ""}`}
+                      fill="none"
+                      aria-hidden
+                    >
+                      <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {/* Bottom CTA */}
       <section className="bg-white py-12 lg:py-16">

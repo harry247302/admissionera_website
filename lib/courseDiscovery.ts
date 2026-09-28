@@ -31,6 +31,7 @@ export type SortOption =
 export type DiscoveryCourse = {
   id: string;
   title: string;
+  code?: string;
   description: string;
   category: CourseCategory;
   level: CourseLevel;
@@ -498,7 +499,7 @@ export function formatFee(value: number) {
   return `₹${value}`;
 }
 
-export function filterCourses(courses: DiscoveryCourse[], filters: DiscoveryFilters) {
+export function filterCourses<T extends DiscoveryCourse>(courses: T[], filters: DiscoveryFilters): T[] {
   const query = filters.search.trim().toLowerCase();
 
   return courses.filter((course) => {
@@ -526,6 +527,7 @@ export function filterCourses(courses: DiscoveryCourse[], filters: DiscoveryFilt
       course.category,
       course.level,
       course.studyMode,
+      course.code,
       course.location,
       ...course.specializations,
       ...course.keywords,
@@ -537,7 +539,7 @@ export function filterCourses(courses: DiscoveryCourse[], filters: DiscoveryFilt
   });
 }
 
-export function sortCourses(courses: DiscoveryCourse[], sortBy: SortOption) {
+export function sortCourses<T extends DiscoveryCourse>(courses: T[], sortBy: SortOption): T[] {
   const next = [...courses];
   switch (sortBy) {
     case "newest":
@@ -573,6 +575,7 @@ type ApiCourse = {
   code?: string | null;
   description?: string | null;
   overview?: string | null;
+  
   eligibility?: string | null;
   curriculum?: string | null;
   career_opportunities?: string | null;
@@ -765,6 +768,7 @@ export function mapApiCourseToDiscovery(row: ApiCourse, index = 0): DiscoveryCou
   return {
     id: String(row.uuid || row.id || `${row.code || title}-${index}`),
     title,
+    code: row.code?.trim() || "",
     description,
     category: mapApiCategory(row.department, title),
     level,

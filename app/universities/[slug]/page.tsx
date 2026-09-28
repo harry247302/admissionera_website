@@ -1,4 +1,6 @@
 import { InnerPage } from "@/components/InnerPage";
+import { UniversityDetailPage } from "@/components/universities/UniversityDetailPage";
+import { fetchUniversityDetail } from "@/lib/universityDetail";
 
 const COPY: Record<string, { title: string; description: string }> = {
   india: {
@@ -24,10 +26,20 @@ export default async function UniversityPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const page = COPY[slug] ?? {
-    title: "Universities",
-    description: "Explore universities listed on AdmissionEra.",
-  };
+  const page = COPY[slug];
+  if (page) {
+    return <InnerPage title={page.title} description={page.description} />;
+  }
 
-  return <InnerPage title={page.title} description={page.description} />;
+  try {
+    const university = await fetchUniversityDetail(slug);
+    return <UniversityDetailPage university={university} />;
+  } catch {
+    return (
+      <InnerPage
+        title="University not found"
+        description="We couldn’t load this university. It may have been removed or the link is incorrect."
+      />
+    );
+  }
 }
