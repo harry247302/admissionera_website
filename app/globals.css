@@ -505,6 +505,7 @@ input {
 
   .era-reveal,
   .era-float,
+  .era-ai-float,
   .era-card-lift,
   .era-arrow-move {
     animation: none !important;
@@ -619,6 +620,20 @@ input {
   }
   50% {
     transform: translateY(-10px);
+  }
+}
+
+.era-ai-float {
+  animation: eraAiFloat 3.5s ease-in-out infinite;
+}
+
+@keyframes eraAiFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
   }
 }
 

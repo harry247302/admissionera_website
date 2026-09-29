@@ -161,6 +161,78 @@ export async function fetchDiscoveryUniversities(): Promise<DiscoveryUniversity[
     .filter((uni) => uni.uuid);
 }
 
+export type UniversityCardDetails = {
+  courses: string[];
+  fees: string;
+};
+
+const DEGREE_SHORT_NAMES: [RegExp, string][] = [
+  [/bachelor of commerce/i, "B.Com"],
+  [/bachelor of arts/i, "B.A."],
+  [/bachelor of science/i, "B.Sc"],
+  [/bachelor of technology/i, "B.Tech"],
+  [/master of commerce/i, "M.Com"],
+  [/master of arts/i, "M.A."],
+  [/master of science/i, "M.Sc"],
+  [/master of technology/i, "M.Tech"],
+];
+
+export function shortCourseName(name = "", code = "") {
+  if (code.trim()) return code.trim();
+  const cleaned = name.replace(/\bonline\b|\bdistance\b/gi, "").replace(/\s+/g, " ").trim();
+  const known = DEGREE_SHORT_NAMES.find(([pattern]) => pattern.test(cleaned));
+  if (known) return known[1];
+  const initials = cleaned
+    .split(" ")
+    .filter((word) => /^[A-Z]/.test(word) && !/^(of|in|and|with|the)$/i.test(word))
+    .map((word) => word[0])
+    .join("");
+  return initials.length >= 2 && initials.length <= 5 ? initials : cleaned;
+}
+
+export function formatInrShort(amount: number) {
+  if (amount >= 100000) {
+    const lakhs = amount / 100000;
+    return `₹${Number.isInteger(lakhs) ? lakhs : lakhs.toFixed(1).replace(/\.0$/, "")}L`;
+  }
+  return `₹${amount.toLocaleString("en-IN")}`;
+}
+
+type ApiUniversityCourse = {
+  name?: string;
+  code?: string;
+  fees?: { amount?: number | string | null }[];
+};
+
+export async function fetchUniversityCardDetails(uuid: string): Promise<UniversityCardDetails> {
+  const res = await fetch(`${UNIVERSITIES_API_URL}/${encodeURIComponent(uuid)}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (!res.ok) return { courses: [], fees: "" };
+
+  const payload = await res.json();
+  const university = payload?.university || payload?.data || payload;
+  const courses = (university?.courses || []) as ApiUniversityCourse[];
+
+  const names = Array.from(
+    new Set(courses.map((course) => shortCourseName(course.name, course.code)).filter(Boolean))
+  );
+  const amounts = courses
+    .flatMap((course) => course.fees || [])
+    .map((fee) => Number(fee.amount))
+    .filter((amount) => Number.isFinite(amount) && amount > 0);
+
+  let fees = "";
+  if (amounts.length) {
+    const min = Math.min(...amounts);
+    const max = Math.max(...amounts);
+    fees = min === max ? formatInrShort(min) : `${formatInrShort(min)} - ${formatInrShort(max)}`;
+  }
+
+  return { courses: names, fees };
+}
+
 export function filterUniversities(
   universities: DiscoveryUniversity[],
   tab: UniversityFilterTab,

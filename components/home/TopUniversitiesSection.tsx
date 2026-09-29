@@ -1,253 +1,254 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  filterUniversities,
   fetchDiscoveryUniversities,
-  type DiscoveryUniversity,
-  type UniversityFilterTab,
+  fetchUniversityCardDetails,
 } from "@/lib/universities";
 
-const STATS = [
+export type CollegeCardData = {
+  id: string;
+  name: string;
+  location: string;
+  rating: number | null;
+  image: string;
+  courses: string[];
+  fees: string;
+  href: string;
+};
+
+const MAX_CARDS = 5;
+
+const colleges: CollegeCardData[] = [
   {
-    label: "Enquiries Last Month",
-    value: "90+ Students Enquired",
-    icon: "cap" as const,
+    id: "delhi-university",
+    name: "Delhi University",
+    location: "Delhi",
+    rating: 4.5,
+    image: "/assets/admissionera/colleges/campus-1.jpg",
+    courses: ["B.A.", "B.Com", "B.Sc"],
+    fees: "₹72,000 - ₹5,00,000",
+    href: "/search?q=Delhi%20University",
   },
   {
-    label: "Counselling This Month",
-    value: "100+ Students Counseled",
-    icon: "people" as const,
+    id: "amity-university",
+    name: "Amity University",
+    location: "Noida",
+    rating: 4.3,
+    image: "/assets/admissionera/colleges/campus-2.jpg",
+    courses: ["BBA", "BCA", "MBA"],
+    fees: "₹2.5L - ₹8L",
+    href: "/search?q=Amity%20University",
   },
   {
-    label: "Counselling Experts",
-    value: "50+ Domain Experts",
-    icon: "headset" as const,
+    id: "lovely-professional-university",
+    name: "Lovely Professional University",
+    location: "Punjab",
+    rating: 4.4,
+    image: "/assets/admissionera/colleges/campus-3.jpg",
+    courses: ["B.Tech", "BBA", "BCA"],
+    fees: "₹2L - ₹6L",
+    href: "/search?q=Lovely%20Professional%20University",
   },
   {
-    label: "Google Rating",
-    value: "4.5/5 From 2,000+ Reviews",
-    icon: "star" as const,
+    id: "christ-university",
+    name: "Christ University",
+    location: "Bangalore",
+    rating: 4.5,
+    image: "/assets/admissionera/colleges/campus-4.jpg",
+    courses: ["BBA", "BCA", "MBA"],
+    fees: "₹2L - ₹5L",
+    href: "/search?q=Christ%20University",
+  },
+  {
+    id: "manipal-university",
+    name: "Manipal University",
+    location: "Bangalore",
+    rating: 4.6,
+    image: "/assets/admissionera/colleges/campus-5.jpg",
+    courses: ["B.Tech", "BBA", "BCA"],
+    fees: "₹3L - ₹8L",
+    href: "/search?q=Manipal%20University",
   },
 ];
 
-const FILTER_TABS: { id: UniversityFilterTab; label: string; icon: "all" | "fire" | "gov" | "private" | "globe" | "map" }[] = [
-  { id: "all", label: "All Universities", icon: "all" },
-  { id: "popular", label: "Popular", icon: "fire" },
-  { id: "government", label: "Government", icon: "gov" },
-  { id: "private", label: "Private", icon: "private" },
-  { id: "international", label: "International", icon: "globe" },
-  { id: "state", label: "State-wise", icon: "map" },
-];
-
-function StatIcon({ type }: { type: (typeof STATS)[number]["icon"] }) {
-  const common = "h-5 w-5";
-  switch (type) {
-    case "people":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden>
-          <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.7" />
-          <circle cx="16.5" cy="9" r="2.4" stroke="currentColor" strokeWidth="1.7" />
-          <path d="M3.5 19c1.2-3 3.3-4.5 5.5-4.5s4.3 1.5 5.5 4.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-          <path d="M14 14.8c1.5-.5 3-.3 4.5 1.7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-        </svg>
-      );
-    case "headset":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden>
-          <path d="M4 13v-1a8 8 0 0 1 16 0v1" stroke="currentColor" strokeWidth="1.7" />
-          <rect x="3" y="12" width="4" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.7" />
-          <rect x="17" y="12" width="4" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.7" />
-          <path d="M17 18v1a3 3 0 0 1-3 3h-2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-        </svg>
-      );
-    case "star":
-      return (
-        <svg viewBox="0 0 24 24" fill="currentColor" className={common} aria-hidden>
-          <path d="m12 3.4 2.5 5.1 5.6.8-4 3.9.9 5.6L12 16.2 7 18.8l.9-5.6-4-3.9 5.6-.8L12 3.4Z" />
-        </svg>
-      );
-    default:
-      return (
-        <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden>
-          <path d="M3 10.5 12 5l9 5.5-9 5.5L3 10.5Z" stroke="currentColor" strokeWidth="1.7" />
-          <path d="M6.5 12.5v4c0 .8 2.3 2.2 5.5 2.2s5.5-1.4 5.5-2.2v-4" stroke="currentColor" strokeWidth="1.7" />
-        </svg>
-      );
-  }
+function isSameCollege(apiName: string, fallbackName: string) {
+  const normalize = (value: string) => value.toLowerCase().replace(/[^a-z]/g, "");
+  return normalize(apiName).includes(normalize(fallbackName));
 }
 
-function TabIcon({ type }: { type: (typeof FILTER_TABS)[number]["icon"] }) {
-  const common = "h-4 w-4";
-  switch (type) {
-    case "fire":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden>
-          <path d="M12 3c2 3 1 5 1 5s3-1 5 2c2 3 0 8-6 8s-8-4-6-8c1-2 3-3 4-4 .5 2 1 3 2 4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-        </svg>
-      );
-    case "gov":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden>
-          <path d="M4 20h16M6 20V10h12v10M12 4l8 4H4l8-4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-        </svg>
-      );
-    case "private":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden>
-          <path d="M5 20V9l7-4 7 4v11" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-          <path d="M10 20v-5h4v5" stroke="currentColor" strokeWidth="1.6" />
-        </svg>
-      );
-    case "globe":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden>
-          <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" />
-          <path d="M4 12h16M12 4c2.5 2.8 3.8 5.4 3.8 8S14.5 17.2 12 20c-2.5-2.8-3.8-5.4-3.8-8S9.5 6.8 12 4Z" stroke="currentColor" strokeWidth="1.6" />
-        </svg>
-      );
-    case "map":
-      return (
-        <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden>
-          <path d="m9 4 6 2 5-2v14l-5 2-6-2-5 2V6l5-2Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-          <path d="M9 4v14M15 6v14" stroke="currentColor" strokeWidth="1.6" />
-        </svg>
-      );
-    default:
-      return (
-        <svg viewBox="0 0 24 24" fill="none" className={common} aria-hidden>
-          <path d="M4 7.5 12 4l8 3.5-8 3.5L4 7.5Z" stroke="currentColor" strokeWidth="1.6" />
-          <path d="M6.5 10.5v5c0 .9 2.4 2.5 5.5 2.5s5.5-1.6 5.5-2.5v-5" stroke="currentColor" strokeWidth="1.6" />
-        </svg>
-      );
-  }
+function mergeColleges(apiColleges: CollegeCardData[]) {
+  const fallback = colleges.filter(
+    (college) => !apiColleges.some((api) => isSameCollege(api.name, college.name))
+  );
+  return [...apiColleges, ...fallback].slice(0, MAX_CARDS);
 }
 
-function HeartIcon({ filled = false }: { filled?: boolean }) {
+function HeartIcon({ filled }: { filled: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} className="h-5 w-5" aria-hidden>
-      <path
-        d="M12 20s-7-4.4-9.2-8.2C1.2 9.2 2.6 6 5.8 6c1.9 0 3.2 1.1 4 2.2C10.6 7.1 11.9 6 13.8 6c3.2 0 4.6 3.2 3 5.8C19 15.6 12 20 12 20Z"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinejoin="round"
-      />
+    <svg
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`h-4 w-4 transition-colors duration-200 ${
+        filled ? "fill-current" : "fill-transparent group-hover/fav:fill-current"
+      }`}
+      aria-hidden
+    >
+      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
     </svg>
   );
 }
 
-function BookIcon() {
+function MapPinIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5 shrink-0" aria-hidden>
-      <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19v16H7.5A2.5 2.5 0 0 0 5 21.5V5.5Z" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M5 18.5h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-3 w-3 shrink-0 text-[#98A2B3] sm:h-3.5 sm:w-3.5"
+      aria-hidden
+    >
+      <path d="M20 10c0 4.99-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 14.99 4 10a8 8 0 0 1 16 0" />
+      <circle cx="12" cy="10" r="3" />
     </svg>
   );
 }
 
-function PinIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5 shrink-0" aria-hidden>
-      <path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10Z" stroke="currentColor" strokeWidth="1.6" />
-      <circle cx="12" cy="11" r="2" stroke="currentColor" strokeWidth="1.6" />
-    </svg>
-  );
-}
-
-function UniversityCard({
-  university,
+function CollegeCard({
+  college,
   favorite,
   onToggleFavorite,
 }: {
-  university: DiscoveryUniversity;
+  college: CollegeCardData;
   favorite: boolean;
   onToggleFavorite: () => void;
 }) {
   return (
-    <article className="group flex h-full flex-col rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_8px_24px_rgba(23,19,74,0.05)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(91,33,182,0.1)]">
-      <div className="flex justify-end">
+    <article className="group relative flex h-full flex-col rounded-[14px] border border-[#EAECF0] bg-white p-[5px] shadow-[0_1px_3px_rgba(16,24,40,0.05)] transition duration-200 ease-out hover:-translate-y-[3px] hover:border-[#D0D5DD] hover:shadow-[0_10px_24px_rgba(16,24,40,0.08)] sm:p-1.5">
+      <div className="relative">
+        <div className="relative h-[112px] overflow-hidden rounded-[11px] bg-[#F2F4F7] sm:h-[135px]">
+          <Image
+            src={college.image}
+            alt={`${college.name} campus`}
+            fill
+            sizes="(max-width: 600px) 50vw, (max-width: 1024px) 33vw, 240px"
+            className="object-cover transition duration-300 ease-out group-hover:scale-[1.02]"
+          />
+        </div>
+
         <button
           type="button"
           onClick={onToggleFavorite}
-          className={`rounded-md p-1 transition ${
-            favorite ? "text-rose-500" : "text-slate-300 hover:text-rose-400"
-          }`}
-          aria-label={favorite ? `Remove ${university.name} from saved` : `Save ${university.name}`}
+          aria-pressed={favorite}
+          aria-label={
+            favorite
+              ? `Remove ${college.name} from favorites`
+              : `Add ${college.name} to favorites`
+          }
+          className="group/fav absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-[10px] bg-white text-[#DB2777] shadow-[0_2px_8px_rgba(16,24,40,0.12)] transition duration-200 hover:scale-[1.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B21B6] sm:right-2.5 sm:top-2.5 sm:h-[34px] sm:w-[34px]"
         >
           <HeartIcon filled={favorite} />
         </button>
+
+        {college.rating != null ? (
+          <span className="absolute -bottom-3 right-2.5 inline-flex items-center gap-1 rounded-full bg-white px-2 py-[3px] text-[11px] font-semibold text-[#16A34A] shadow-[0_2px_8px_rgba(16,24,40,0.12)] sm:text-[12px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#16A34A]" aria-hidden />
+            <span className="sr-only">Rating </span>
+            {college.rating.toFixed(1)}
+          </span>
+        ) : null}
       </div>
 
-      <div className="mt-1 flex flex-1 flex-col items-center text-center">
-        <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-slate-50 ring-1 ring-slate-100">
-          {university.logo ? (
-            <Image
-              src={university.logo}
-              alt={`${university.name} logo`}
-              width={64}
-              height={64}
-              className="h-full w-full object-contain p-1.5"
-              unoptimized
-            />
-          ) : (
-            <span className="text-sm font-bold text-[#5b21b6]">
-              {(university.shortName || university.name).slice(0, 3).toUpperCase()}
-            </span>
-          )}
-        </div>
-
-        <h3 className="mt-4 line-clamp-2 min-h-[2.6rem] text-sm font-bold leading-snug text-era-dark">
-          {university.name}
+      <div className="flex flex-1 flex-col px-1.5 pb-1.5 pt-3 sm:px-2 sm:pb-2">
+        <h3 className="line-clamp-2 text-[13px] font-bold leading-[1.3] text-[#172033] sm:text-[14.5px]">
+          {college.name}
         </h3>
 
-        <div className="mt-3 flex w-full items-center justify-center gap-3 text-[11px] font-medium text-slate-500">
-          <span className="inline-flex items-center gap-1">
-            <BookIcon />
-            {university.courseCount} Course{university.courseCount === 1 ? "" : "s"}
-          </span>
-          <span className="inline-flex max-w-[45%] items-center gap-1 truncate" title={university.state}>
-            <PinIcon />
-            <span className="truncate">{university.state}</span>
-          </span>
+        <p className="mt-1.5 flex min-w-0 items-center gap-1 text-[10px] text-[#667085] sm:text-[11.5px]">
+          <MapPinIcon />
+          <span className="truncate">{college.location}</span>
+        </p>
+
+        {college.courses.length > 0 ? (
+          <ul className="mt-2.5 flex flex-wrap gap-1 sm:gap-1.5" aria-label="Popular courses">
+            {college.courses.slice(0, 3).map((course) => (
+              <li
+                key={course}
+                className="max-w-full truncate rounded-md bg-[#F7F8FA] px-1.5 py-1 text-[9.5px] font-medium leading-none text-[#475467] sm:px-2 sm:py-[5px] sm:text-[10.5px]"
+              >
+                {course}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {college.fees ? (
+          <p className="mt-2.5 text-[10px] leading-snug text-[#667085] sm:text-[11.5px]">
+            <span className="font-semibold text-[#344054]">Fees:</span> {college.fees}
+          </p>
+        ) : null}
+
+        <div className="mt-auto flex gap-1.5 pt-3 sm:gap-2">
+          <Link
+            href={college.href}
+            className="inline-flex h-9 flex-1 items-center justify-center whitespace-nowrap rounded-[7px] bg-[#5B21B6] px-1 text-[10px] font-semibold text-white transition duration-150 hover:bg-[#4C1D95] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B21B6] sm:h-[38px] sm:text-[11px]"
+          >
+            View College
+          </Link>
+          <Link
+            href={`/compare?university=${encodeURIComponent(college.name)}`}
+            aria-label={`Compare ${college.name}`}
+            className="inline-flex h-9 flex-1 items-center justify-center whitespace-nowrap rounded-[7px] border border-[#E4E7EC] bg-white px-1 text-[10px] font-semibold text-[#344054] transition duration-150 hover:border-[#5B21B6] hover:bg-[#F9FAFB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B21B6] sm:h-[38px] sm:text-[11px]"
+          >
+            Compare
+          </Link>
         </div>
       </div>
-
-      <Link
-        href={`/universities/${university.uuid}`}
-        className="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-violet-100 bg-violet-50/70 px-3 text-sm font-semibold text-[#5b21b6] transition hover:border-violet-200 hover:bg-violet-100"
-      >
-        View Courses →
-      </Link>
     </article>
   );
 }
 
 export function TopUniversitiesSection() {
-  const [universities, setUniversities] = useState<DiscoveryUniversity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [tab, setTab] = useState<UniversityFilterTab>("all");
-  const [search, setSearch] = useState("");
+  const [cards, setCards] = useState<CollegeCardData[]>(colleges);
   const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
-      setLoading(true);
-      setError("");
       try {
-        const data = await fetchDiscoveryUniversities();
-        if (!cancelled) setUniversities(data);
-      } catch (err) {
-        if (!cancelled) {
-          setUniversities([]);
-          setError(err instanceof Error ? err.message : "Failed to load universities");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+        const universities = await fetchDiscoveryUniversities();
+        const top = universities.slice(0, MAX_CARDS);
+        const details = await Promise.all(
+          top.map((uni) => fetchUniversityCardDetails(uni.uuid).catch(() => null))
+        );
+
+        const apiColleges: CollegeCardData[] = top.map((uni, index) => {
+          const fallback = colleges.find((college) => isSameCollege(uni.name, college.name));
+          const detail = details[index];
+          return {
+            id: uni.uuid,
+            name: uni.name,
+            location: uni.state || fallback?.location || "India",
+            rating: uni.ratings ?? fallback?.rating ?? null,
+            image: uni.banner || fallback?.image || colleges[index % colleges.length].image,
+            courses: detail?.courses.length ? detail.courses : fallback?.courses ?? [],
+            fees: detail?.fees || fallback?.fees || "",
+            href: `/universities/${uni.uuid}`,
+          };
+        });
+
+        if (!cancelled) setCards(mergeColleges(apiColleges));
+      } catch {
+        // Keep the curated list when the API is unavailable.
       }
     })();
 
@@ -256,13 +257,6 @@ export function TopUniversitiesSection() {
     };
   }, []);
 
-  const filtered = useMemo(
-    () => filterUniversities(universities, tab, search),
-    [universities, tab, search]
-  );
-
-  const visible = filtered.slice(0, 12);
-
   const toggleFavorite = (id: string) => {
     setFavorites((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
@@ -270,147 +264,43 @@ export function TopUniversitiesSection() {
   };
 
   return (
-    <section className="relative bg-[#f7f5fb] py-12 lg:py-16" aria-labelledby="top-universities-heading">
-      <div className="era-shell">
-        <div className="overflow-hidden rounded-2xl bg-[#4c1d95] px-4 py-5 text-white shadow-[0_16px_40px_rgba(76,29,149,0.28)] sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="grid flex-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:gap-0 xl:divide-x xl:divide-white/20">
-              {STATS.map((stat) => (
-                <div key={stat.label} className="flex items-center gap-3 xl:px-5 first:xl:pl-0 last:xl:pr-0">
-                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15 text-white">
-                    <StatIcon type={stat.icon} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-medium text-violet-200">{stat.label}</p>
-                    <p className="mt-0.5 text-sm font-bold leading-snug">{stat.value}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p
-              className="shrink-0 text-right text-lg font-semibold italic tracking-wide text-white/90 lg:pl-6"
-              style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+    <section className="bg-white py-10 sm:py-12 lg:py-14" aria-labelledby="top-colleges-heading">
+      <div className="mx-auto w-[min(1200px,calc(100%-2rem))]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+          <div className="min-w-0">
+            <p className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#5B21B6]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#DB2777]" aria-hidden />
+              Top Colleges
+            </p>
+            <h2
+              id="top-colleges-heading"
+              className="mt-1.5 text-[22px] font-extrabold leading-[1.15] tracking-tight text-[#172033] sm:text-[25px] lg:text-[28px]"
             >
-              Your Future Our Focus
+              Colleges That Match Your Goals
+            </h2>
+            <p className="mt-1.5 text-[13px] text-[#667085] sm:text-sm">
+              Explore top colleges based on your preferred course, location and budget.
             </p>
           </div>
-        </div>
-
-        <div className="mt-10 text-center">
-          <div className="mx-auto flex max-w-md items-center gap-3">
-            <span className="h-px flex-1 bg-violet-200" />
-            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500">
-              Top Universities
-            </p>
-            <span className="h-px flex-1 bg-violet-200" />
-          </div>
-          <h2
-            id="top-universities-heading"
-            className="mt-4 text-3xl font-bold tracking-[-0.03em] text-[#5b21b6] sm:text-4xl"
-          >
-            Online & Distance Education Universities
-          </h2>
-          <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-500 sm:text-base">
-            Discover India&apos;s leading universities offering comprehensive courses through online
-            and distance education to shape your future.
-          </p>
-        </div>
-
-        <div className="mt-8 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-wrap gap-2">
-            {FILTER_TABS.map((item) => {
-              const active = tab === item.id;
-              const countLabel =
-                item.id === "all" ? `All Universities (${universities.length})` : item.label;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setTab(item.id)}
-                  aria-pressed={active}
-                  className={`inline-flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition ${
-                    active
-                      ? "bg-[#5b21b6] text-white shadow-[0_10px_24px_rgba(91,33,182,0.28)]"
-                      : "bg-violet-100/80 text-[#5b21b6] hover:bg-violet-200/80"
-                  }`}
-                >
-                  <TabIcon type={item.icon} />
-                  {countLabel}
-                </button>
-              );
-            })}
-          </div>
-
-          <label className="relative block w-full xl:max-w-xs">
-            <span className="sr-only">Search universities</span>
-            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
-              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden>
-                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" />
-                <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-            </span>
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search universities..."
-              className="min-h-11 w-full rounded-full border border-violet-100 bg-white py-2.5 pl-10 pr-4 text-sm text-era-dark outline-none ring-[#5b21b6]/30 placeholder:text-slate-400 focus:ring-2"
-            />
-          </label>
-        </div>
-
-        <div className="mt-8">
-          {loading ? (
-            <div className="rounded-3xl border border-violet-100 bg-white px-6 py-16 text-center">
-              <p className="text-lg font-bold text-era-dark">Loading universities…</p>
-              <p className="mt-2 text-sm text-slate-500">Fetching partner campuses for you.</p>
-            </div>
-          ) : error ? (
-            <div className="rounded-3xl border border-dashed border-red-200 bg-white px-6 py-16 text-center">
-              <p className="text-lg font-bold text-era-dark">Couldn’t load universities</p>
-              <p className="mt-2 text-sm text-slate-500">{error}</p>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-violet-200 bg-white px-6 py-16 text-center">
-              <p className="text-lg font-bold text-era-dark">No universities match your filters</p>
-              <p className="mt-2 text-sm text-slate-500">Try another tab or clear the search.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-              {visible.map((university) => (
-                <UniversityCard
-                  key={university.uuid}
-                  university={university}
-                  favorite={favorites.includes(university.uuid)}
-                  onToggleFavorite={() => toggleFavorite(university.uuid)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="mt-10 flex flex-col items-center gap-5 sm:flex-row sm:justify-between">
-          <p className="inline-flex items-center gap-2 text-sm font-medium text-slate-500">
-            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-[#5b21b6]" aria-hidden>
-              <path d="M3 10.5 12 5l9 5.5-9 5.5L3 10.5Z" stroke="currentColor" strokeWidth="1.7" />
-              <path d="M6.5 12.5v4c0 .8 2.3 2.2 5.5 2.2s5.5-1.4 5.5-2.2v-4" stroke="currentColor" strokeWidth="1.7" />
-            </svg>
-            Partnering with the best universities for a brighter tomorrow.
-          </p>
 
           <Link
             href="/universities"
-            className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#5b21b6] px-7 text-sm font-bold text-white shadow-[0_12px_28px_rgba(91,33,182,0.28)] transition hover:bg-[#4c1d95]"
+            className="inline-flex shrink-0 items-center gap-1 self-start text-[12.5px] font-semibold text-[#5B21B6] transition hover:gap-1.5 hover:text-[#DB2777] sm:self-auto sm:pb-1"
           >
-            View All Universities →
+            View All Colleges
+            <span aria-hidden>→</span>
           </Link>
+        </div>
 
-          <p
-            className="text-base font-semibold italic text-[#5b21b6]/80"
-            style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-          >
-            Learn Grow Succeed
-          </p>
+        <div className="mt-6 grid grid-cols-2 gap-2.5 min-[480px]:gap-3.5 min-[601px]:grid-cols-3 lg:grid-cols-4 lg:gap-4 min-[75rem]:grid-cols-5 min-[75rem]:gap-[18px]">
+          {cards.map((college) => (
+            <CollegeCard
+              key={college.id}
+              college={college}
+              favorite={favorites.includes(college.id)}
+              onToggleFavorite={() => toggleFavorite(college.id)}
+            />
+          ))}
         </div>
       </div>
     </section>
