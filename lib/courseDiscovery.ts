@@ -668,6 +668,16 @@ export type CourseContentTable = {
   rows: CourseContentTableRow[];
 };
 
+export type CourseSpecialization = {
+  id: string;
+  uuid: string;
+  name: string;
+  slug: string;
+  code: string;
+  shortName: string;
+  description: string;
+};
+
 export type CourseDetail = {
   id: string;
   name: string;
@@ -692,6 +702,7 @@ export type CourseDetail = {
   faqs: CourseFaq[];
   paragraphs: CourseContentParagraph[];
   tables: CourseContentTable[];
+  specializations: CourseSpecialization[];
 };
 
 function mapApiLevel(level?: string | null): CourseLevel {
@@ -835,6 +846,20 @@ export function mapApiCourseToDetail(row: Record<string, unknown> = {}): CourseD
     }),
   }));
 
+  const specializations: CourseSpecialization[] = (
+    Array.isArray(row.specializations) ? (row.specializations as Array<Record<string, unknown>>) : []
+  )
+    .filter((spec) => spec && (spec.name || spec.uuid))
+    .map((spec) => ({
+      id: String(spec.id ?? spec.uuid ?? ""),
+      uuid: String(spec.uuid || ""),
+      name: String(spec.name || ""),
+      slug: String(spec.slug || ""),
+      code: String(spec.code || ""),
+      shortName: String(spec.short_name || spec.shortName || ""),
+      description: String(spec.description || ""),
+    }));
+
   return {
     id: String(row.uuid || row.id || ""),
     name: String(row.name || row.degree || row.code || "Untitled Course"),
@@ -859,6 +884,7 @@ export function mapApiCourseToDetail(row: Record<string, unknown> = {}): CourseD
     faqs: faqs.filter((faq) => faq?.is_active !== false),
     paragraphs: [...paragraphs].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
     tables: [...tables].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
+    specializations,
   };
 }
 
@@ -899,6 +925,7 @@ export async function fetchCourseById(id: string): Promise<CourseDetail> {
   }
 
   const payload = await res.json();
+  console.log("payload", payload);
   const row = payload?.data || payload?.course;
   if (!row) {
     throw new Error("Course not found");
