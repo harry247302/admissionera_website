@@ -1,44 +1,42 @@
-const BENEFITS = [
+const STEPS = [
   {
-    title: "Wide Range of Courses",
-    description: "Explore programs across multiple career paths",
+    title: "Discover",
+    description: "Find colleges & courses",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden>
-        <path d="M4 7.5 12 4l8 3.5-8 3.5L4 7.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-        <path d="M6.5 10.2v5.1c0 .8 2.4 2.4 5.5 2.4s5.5-1.6 5.5-2.4v-5.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden>
+        <rect x="4" y="5" width="16" height="13" rx="2" stroke="currentColor" strokeWidth="1.8" />
+        <circle cx="11" cy="11" r="2.6" stroke="currentColor" strokeWidth="1.8" />
+        <path d="m13 13 2.5 2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
       </svg>
     ),
   },
   {
-    title: "Top Colleges Across India",
-    description: "Discover trusted colleges and universities",
+    title: "Compare",
+    description: "Compare fees, eligibility, placements & facilities",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden>
-        <path d="M4 20V9.5L12 5l8 4.5V20" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-        <path d="M9 20v-5h6v5" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden>
+        <rect x="6" y="4" width="12" height="16" rx="2" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M9.5 9h5M9.5 12.5h5M9.5 16h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
       </svg>
     ),
   },
   {
-    title: "Expert Counselling",
-    description: "Get personalized guidance from experts",
+    title: "Get Guidance",
+    description: "Talk to an admission expert",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden>
-        <circle cx="9" cy="9" r="3" stroke="currentColor" strokeWidth="1.8" />
-        <circle cx="16.5" cy="10.5" r="2.3" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M3.5 19c.8-2.6 2.9-4 5.5-4s4.7 1.4 5.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        <path d="M14.2 15.2c1.5-.5 3.1-.3 4.5.8.7.6 1.2 1.4 1.5 2.3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden>
+        <rect x="4" y="5" width="16" height="13" rx="2" stroke="currentColor" strokeWidth="1.8" />
+        <path d="m9 14 5.5-5.5M10.5 8.5H14.5V12.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
   {
-    title: "Admission Support",
-    description: "Get assistance throughout your admission journey",
+    title: "Apply",
+    description: "Complete your application",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden>
-        <path d="M7 11V8a5 5 0 0 1 10 0v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        <rect x="5" y="11" width="14" height="9" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
-        <circle cx="12" cy="15.5" r="1.2" fill="currentColor" />
+      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden>
+        <path d="M7 4h7l4 4v12H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="m9.5 13.5 2 2 3.5-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -46,31 +44,43 @@ const BENEFITS = [
 
 export function BenefitsSection() {
   return (
-    <section className="relative z-10 -mt-6 pb-4 sm:-mt-8 lg:-mt-10" aria-label="Key benefits">
+    <section className="bg-white py-10 lg:py-14" aria-labelledby="how-it-works-heading">
       <div className="era-shell">
-        <div className="era-reveal overflow-hidden rounded-[1.75rem] border border-violet-100/80 bg-white shadow-[0_18px_50px_rgba(23,19,74,0.08)]">
-          <div className="grid grid-cols-2 lg:grid-cols-4">
-            {BENEFITS.map((item, index) => (
-              <article
-                key={item.title}
-                className={`relative flex flex-col gap-3 p-5 sm:p-6 lg:p-7 ${
-                  index % 2 === 1 ? "border-l border-violet-100/80" : ""
-                } ${index > 1 ? "border-t border-violet-100/80 lg:border-t-0" : ""} ${
-                  index > 0 ? "lg:border-l lg:border-violet-100/80" : ""
-                }`}
-              >
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-era-lilac text-era-primary">
-                  {item.icon}
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-era-dark sm:text-base">{item.title}</h3>
-                  <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">
-                    {item.description}
-                  </p>
-                </div>
-              </article>
-            ))}
+        <div className="era-reveal grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start lg:gap-10">
+          <div>
+            <p className="inline-flex items-center gap-2 text-xs font-semibold text-era-primary">
+              <span className="h-1.5 w-1.5 rounded-full bg-era-primary" aria-hidden />
+              How It Works
+            </p>
+            <h2
+              id="how-it-works-heading"
+              className="mt-2 text-2xl font-bold tracking-[-0.02em] text-era-dark sm:text-[1.65rem]"
+            >
+              From Search to Admission
+            </h2>
+            <p className="mt-1.5 text-sm text-slate-500">A simple and transparent admission process.</p>
           </div>
+
+          <ol className="relative grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+            <span
+              className="pointer-events-none absolute left-5 right-0 top-5 hidden border-t border-dashed border-slate-200 lg:block"
+              aria-hidden
+            />
+            {STEPS.map((step, index) => (
+              <li key={step.title} className="relative">
+                <span className="relative z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-era-lilac text-era-primary ring-4 ring-white">
+                  {step.icon}
+                </span>
+                <p className="mt-3 text-xs font-bold text-era-dark">
+                  {String(index + 1).padStart(2, "0")}
+                </p>
+                <h3 className="mt-0.5 text-sm font-bold text-era-dark sm:text-base">{step.title}</h3>
+                <p className="mt-1 max-w-[13rem] text-xs leading-5 text-slate-500 sm:text-[13px]">
+                  {step.description}
+                </p>
+              </li>
+            ))}
+          </ol>
         </div>
       </div>
     </section>

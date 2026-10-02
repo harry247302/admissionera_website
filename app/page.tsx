@@ -17,9 +17,9 @@ export default function Home() {
       <CourseDiscoverySection />
 
       <BenefitsSection />
+      <TopUniversitiesSection />
       <AboutSection />
       <CoursesSection />
-      <TopUniversitiesSection />
       <ImpactSection />
       <TestimonialsSection />
       <CTASection />
