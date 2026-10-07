@@ -4,7 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
+  ADMISSION_EXPERTS,
   expertContactHref,
+  fetchCounsellors,
   type AdmissionExpert,
   type ExpertTone,
 } from "@/lib/admissionExperts";
@@ -120,13 +122,26 @@ function ExpertCard({ expert, primary }: { expert: AdmissionExpert; primary: boo
           className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/60"
         />
         {expert.image ? (
-          <Image
+            <span
+            role="img"
+            aria-label={`${expert.name}, ${expert.specialisation} counsellor`}
+            className={`absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-2xl font-bold shadow-[0_8px_20px_rgba(16,27,50,0.08)] ring-4 ring-white ${tone.initials}`}
+          >
+              <Image
             src={expert.image}
             alt={`${expert.name}, ${expert.specialisation} counsellor`}
             fill
             sizes="(max-width: 640px) 80vw, 220px"
-            className="object-contain object-bottom"
+            className="h-20 w-20 object-contain object-bottom rounded-full"
           />
+          </span>
+          // <Image
+          //   src={expert.image}
+          //   alt={`${expert.name}, ${expert.specialisation} counsellor`}
+          //   fill
+          //   // sizes="(max-width: 640px) 80vw, 220px"
+          //   className="object-contain object-bottom"
+          // />
         ) : (
           <span
             role="img"
@@ -174,16 +189,28 @@ function ExpertCard({ expert, primary }: { expert: AdmissionExpert; primary: boo
           </svg>
         </h3>
         <p className="mt-0.5 truncate text-[12px] text-[#62718A]">{expert.specialisation}</p>
-        <p className="mt-1.5 flex items-center gap-1 text-[11.5px] text-[#62718A]">
-          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-[#F5A900]" aria-hidden>
-            <path
-              fill="currentColor"
-              d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01Z"
-            />
-          </svg>
-          <span className="font-semibold text-[#101B32]">{expert.rating.toFixed(1)}</span>
-          <span>({expert.studentsGuided} students)</span>
-        </p>
+        {typeof expert.rating === "number" || expert.studentsGuided ? (
+          <p className="mt-1.5 flex items-center gap-1 text-[11.5px] text-[#62718A]">
+            {typeof expert.rating === "number" ? (
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-[#F5A900]" aria-hidden>
+                <path
+                  fill="currentColor"
+                  d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01Z"
+                />
+              </svg>
+            ) : null}
+            {typeof expert.rating === "number" ? (
+              <span className="font-semibold text-[#101B32]">{expert.rating.toFixed(1)}</span>
+            ) : null}
+            {expert.studentsGuided ? (
+              <span>
+                {typeof expert.rating === "number"
+                  ? `(${expert.studentsGuided} students)`
+                  : expert.studentsGuided}
+              </span>
+            ) : null}
+          </p>
+        ) : null}
 
         <Link
           href={contactHref}
@@ -224,7 +251,7 @@ function ExpertsCarousel({ experts }: { experts: AdmissionExpert[] }) {
       track.removeEventListener("scroll", updateControls);
       window.removeEventListener("resize", updateControls);
     };
-  }, [updateControls]);
+  }, [updateControls, experts.length]);
 
   const scrollByCard = (direction: 1 | -1) => {
     const track = trackRef.current;
@@ -279,7 +306,26 @@ function ExpertsCarousel({ experts }: { experts: AdmissionExpert[] }) {
   );
 }
 
-export function AdmissionExpertsSection({ experts }: { experts: AdmissionExpert[] }) {
+export function AdmissionExpertsSection() {
+  const [experts, setExperts] = useState<AdmissionExpert[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const counsellors = await fetchCounsellors();
+        if (!cancelled) setExperts(counsellors.length > 0 ? counsellors : ADMISSION_EXPERTS);
+      } catch {
+        if (!cancelled) setExperts(ADMISSION_EXPERTS);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <section
       aria-labelledby="experts-heading"
