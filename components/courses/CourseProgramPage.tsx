@@ -15,6 +15,7 @@ import {
 
 const NAV_LINKS = [
   { id: "overview", label: "Overview" },
+  { id: "specializations", label: "Specializations" },
   { id: "features", label: "Key Features" },
   { id: "eligibility", label: "Eligibility" },
   { id: "curriculum", label: "Curriculum" },
@@ -28,6 +29,91 @@ const FEATURE_META = [
   { title: "Recognised Degree", tone: "bg-[#f3e8ff] text-[#7c3aed]", match: /ugc|aicte|deb|approv|recogn/i },
   { title: "Career Growth", tone: "bg-[#fff1e8] text-[#ea580c]", match: /career|professional|industr|skill/i },
 ] as const;
+
+const specIconProps = {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.9,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  "aria-hidden": true,
+};
+
+function SparkleIcon() {
+  return (
+    <svg {...specIconProps} className="h-3.5 w-3.5">
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.5 6.5l2 2M15.5 15.5l2 2M6.5 17.5l2-2M15.5 8.5l2-2" />
+    </svg>
+  );
+}
+
+function FlameIcon() {
+  return (
+    <svg {...specIconProps} className="h-3.5 w-3.5">
+      <path d="M12 3c2.5 3 4.5 5.4 4.5 8.6A4.5 4.5 0 0 1 12 16a4.5 4.5 0 0 1-4.5-4.4c0-1.6.7-2.9 1.7-4 .2 1.4 1 2.4 2 2.9C11 8.3 11.3 5.6 12 3Z" />
+      <path d="M8 18.5c1 1.6 2.4 2.5 4 2.5s3-.9 4-2.5" />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg {...specIconProps} className="h-4 w-4 text-[#430f74]">
+      <rect x="4" y="5" width="16" height="15" rx="2.5" />
+      <path d="M4 10h16M9 3v4M15 3v4" />
+    </svg>
+  );
+}
+
+function WifiIcon() {
+  return (
+    <svg {...specIconProps} className="h-4 w-4 text-[#430f74]">
+      <path d="M2.5 9a14 14 0 0 1 19 0M5.5 12.5a9.5 9.5 0 0 1 13 0M8.8 15.8a4.8 4.8 0 0 1 6.4 0" />
+      <circle cx="12" cy="19" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+const SPEC_BENEFITS = [
+  {
+    label: "UGC Recognized",
+    icon: (
+      <svg {...specIconProps} className="h-5 w-5">
+        <path d="M3 9.5 12 5l9 4.5-9 4.5-9-4.5Z" />
+        <path d="M7 11.5V16c0 1 2.2 2.5 5 2.5s5-1.5 5-2.5v-4.5M21 9.5V14" />
+      </svg>
+    ),
+  },
+  {
+    label: "Comprehensive Curriculum",
+    icon: (
+      <svg {...specIconProps} className="h-5 w-5">
+        <path d="M12 6.5C10.5 5.3 8.5 4.8 4 5v13c4.5-.2 6.5.3 8 1.5M12 6.5c1.5-1.2 3.5-1.7 8-1.5v13c-4.5-.2-6.5.3-8 1.5M12 6.5v13" />
+      </svg>
+    ),
+  },
+  {
+    label: "Career Opportunities",
+    icon: (
+      <svg {...specIconProps} className="h-5 w-5">
+        <path d="M6 19v-5M12 19V9M18 19V5" />
+      </svg>
+    ),
+  },
+  {
+    label: "Flexible Learning",
+    icon: (
+      <svg {...specIconProps} className="h-5 w-5">
+        <path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z" />
+      </svg>
+    ),
+  },
+];
+
+function stripTags(value?: string | null) {
+  return String(value || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+}
 
 function tableValue(
   row: CourseContentTable["rows"][number],
@@ -228,7 +314,7 @@ function firstSentence(text = "") {
 }
 
 export function CourseProgramPage({ course }: { course: CourseDetail }) {
-  console.log("course", course);
+  // console.log("course", course);
   const [activeSection, setActiveSection] = useState("overview");
   const [showAllCurriculum, setShowAllCurriculum] = useState(false);
   const [showAllFaqs, setShowAllFaqs] = useState(false);
@@ -338,6 +424,10 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
     },
   ] as const;
   const activeFaqs = course.faqs.filter((faq) => faq?.is_active === true || faq?.is_active == null);
+  const specializations = course.specializations ?? [];
+  const navLinks = NAV_LINKS.filter(
+    (link) => link.id !== "specializations" || specializations.length > 0
+  );
 
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
@@ -507,7 +597,7 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
             aria-label="Programme sections"
           >
             <div className="flex min-w-max gap-1">
-              {NAV_LINKS.map((link) => {
+              {navLinks.map((link) => {
                 const active = activeSection === link.id;
                 return (
                   <a
@@ -641,7 +731,101 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
           </div>
         </div>
       </section>
-      
+
+      {specializations.length > 0 ? (
+        <section id="specializations" className="scroll-mt-28 bg-white  py-10 lg:py-12">
+          <div className="era-shell">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="max-w-2xl">
+                <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#430f74] to-[#5B1A91] px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_8px_20px_rgba(67,15,116,0.25)]">
+                  <SparkleIcon />
+                  Specializations
+                </span>
+                <h2 className="mt-4 text-2xl font-extrabold tracking-[-0.03em] text-[#111827] sm:text-[2rem] sm:leading-tight">
+                  Choose Your Specialization in{" "}
+                  <span className="bg-gradient-to-r from-[#430f74] to-[#7c3aed] bg-clip-text text-transparent">
+                    {breadcrumbLabel}
+                  </span>
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-[#64748B] sm:text-base">
+                  Explore specializations designed to match your interests and career goals.
+                </p>
+              </div>
+              <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full border border-[#E4D5F5] bg-white px-4 py-2 text-sm font-semibold text-[#111827] shadow-sm">
+                <span className="h-2 w-2 rounded-full bg-[#10B981]" aria-hidden />
+                {specializations.length}{" "}
+                {specializations.length === 1 ? "Specialization" : "Specializations"} available
+              </span>
+            </div>
+
+            <div className="mt-6 grid w-full max-w-[800px] grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {specializations.map((spec, index) => {
+                const detailHref = `/courses/${encodeURIComponent(course.slug || course.id)}/${encodeURIComponent(
+                  spec.slug || spec.uuid
+                )}`;
+                // const description =
+                //   stripTags(spec.description)
+                //   || `Build a strong foundation in ${breadcrumbLabel} and develop versatile skills for multiple career opportunities.`;
+                return (
+                  <article
+                    key={spec.slug}
+                    className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-[#E4D5F5] bg-gradient-to-br from-white via-white to-[#F5EEFC] p-4 shadow-[0_10px_28px_rgba(67,15,116,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(67,15,116,0.14)]"
+                  >
+                    <span
+                      className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-gradient-to-br from-[#430f74] to-[#7c3aed] opacity-90"
+                      aria-hidden
+                    />
+
+                    <div className="relative flex items-start justify-between gap-2">
+                      {spec.shortName ? (
+                        <span className="inline-flex rounded-full bg-[#F5EEFC] px-2.5 py-0.5 text-[11px] font-bold tracking-wide text-[#430f74] ring-1 ring-[#E4D5F5]">
+                          {spec.shortName}
+                        </span>
+                      ) : <span />}
+                      {index === 0 ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-0.5 text-[11px] font-semibold text-[#430f74] shadow-sm ring-1 ring-[#E4D5F5]">
+                          <FlameIcon />
+                          Most Popular
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <h3 className="relative mt-3 max-w-[85%] break-words text-base font-extrabold sm:text-lg leading-snug tracking-[-0.02em] text-[#111827]">
+                      {spec.name}
+                    </h3>
+                    {/* <p className="relative mt-1.5 line-clamp-2 text-[13px] leading-5 text-[#64748B]">
+                      {description}
+                    </p> */}
+
+                    <div className="relative mb-4 mt-3 flex flex-wrap gap-1.5 text-xs font-medium text-[#111827]">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E4D5F5] bg-white px-2.5 py-1">
+                        <CalendarIcon />
+                        {duration}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E4D5F5] bg-white px-2.5 py-1">
+                        <WifiIcon />
+                        {modeBadge}
+                      </span>
+                    </div>
+
+                    
+
+                    <Link
+                      href={detailHref}
+                      aria-label={`View more about ${spec.name}`}
+                      className="relative mt-auto inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#430f74] to-[#5B1A91] px-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(67,15,116,0.25)] transition duration-200 hover:-translate-y-0.5 hover:from-[#5B1A91] hover:to-[#6d28d9] hover:shadow-[0_12px_26px_rgba(67,15,116,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#430f74] focus-visible:ring-offset-2"
+                    >
+                      View More
+                      <span aria-hidden>→</span>
+                    </Link>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       {/* Paragraphs: title + content only */}
       {course.paragraphs?.length > 0 ? (
         <section className="bg-white py-12 lg:py-16">

@@ -1,43 +1,9 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import {
-  DEFAULT_FILTERS,
-  filterCourses,
-  fetchDiscoveryCourses,
-  formatFee,
-  sortCourses,
-  type CourseLevel,
-  type DiscoveryCourse,
-  type DiscoveryFilters,
-  type SortOption,
-} from "@/lib/courseDiscovery";
-import {
-  HOME_PG_COURSES,
-  type CourseCardIcon,
-  type HomeCourse,
-} from "@/lib/homeCourseCatalog";
-
-type ViewMode = "grid" | "list";
-
-const PRIMARY = "#440F76";
-
-const LEVEL_NAV_ITEMS: {
-  label: string;
-  badge: string;
-  level: CourseLevel;
-  icon: "cap" | "book" | "cert" | "diploma" | "guide";
-  heading: string;
-}[] = [
-  { label: "PG Courses", badge: "After Graduation", level: "Post Graduation", icon: "cap", heading: "Post Graduation" },
-  { label: "UG Courses", badge: "After 12th", level: "Graduation", icon: "book", heading: "Under Graduation" },
-  { label: "Certificate", badge: "Skill Programs", level: "Certificate", icon: "cert", heading: "Certificate" },
-  { label: "Diploma", badge: "After 12th", level: "Diploma", icon: "diploma", heading: "Diploma" },
-  { label: "Counselling Courses", badge: "Career Guidance", level: "After 10th", icon: "guide", heading: "Counselling" },
-];
-
-const INITIAL_FILTERS: DiscoveryFilters = { ...DEFAULT_FILTERS, levels: ["Post Graduation"] };
+import { fetchDiscoveryCourses, type DiscoveryCourse } from "@/lib/courseDiscovery";
+import type { CourseCardIcon } from "@/lib/homeCourseCatalog";
 
 const CATEGORY_ICONS: Record<DiscoveryCourse["category"], CourseCardIcon> = {
   Management: "briefcase",
@@ -50,10 +16,6 @@ const CATEGORY_ICONS: Record<DiscoveryCourse["category"], CourseCardIcon> = {
   Commerce: "chart",
   Others: "cap",
 };
-
-function toggleValue<T>(list: T[], value: T) {
-  return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
-}
 
 const IconSolidContext = createContext(false);
 
@@ -91,60 +53,6 @@ function ChevronIcon({ className = "h-4 w-4" }: { className?: string }) {
       <path d="m9 6 6 6-6 6" />
     </Svg>
   );
-}
-
-function BookmarkIcon({ filled = false }: { filled?: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} className="h-4 w-4" aria-hidden>
-      <path
-        d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14L12 16.5 5.5 20V6A1.5 1.5 0 0 1 7 4.5Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function LevelIcon({ type }: { type: (typeof LEVEL_NAV_ITEMS)[number]["icon"] }) {
-  switch (type) {
-    case "book":
-      return (
-        <Svg>
-          <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19v16H7.5A2.5 2.5 0 0 0 5 21.5V5.5Z" />
-          <path d="M5 18.5h12" />
-        </Svg>
-      );
-    case "cert":
-      return (
-        <Svg>
-          <path d="M7 3.5h7l4 4v13H7v-17Z" />
-          <path d="M14 3.5v4h4M9.5 12h5M9.5 15.5h5" />
-        </Svg>
-      );
-    case "diploma":
-      return (
-        <Svg>
-          <circle cx="12" cy="9" r="5" />
-          <path d="m8.8 13.3-1.3 7.2 4.5-2.4 4.5 2.4-1.3-7.2" />
-        </Svg>
-      );
-    case "guide":
-      return (
-        <Svg>
-          <circle cx="9" cy="8.5" r="2.6" />
-          <circle cx="16.5" cy="9.5" r="2" />
-          <path d="M4.5 18.5c.7-2.7 2.3-4.2 4.5-4.2s3.8 1.5 4.5 4.2M14.5 14.8c2-.4 3.7.6 4.6 3.2" />
-        </Svg>
-      );
-    default:
-      return (
-        <Svg>
-          <path d="M3 10.5 12 5l9 5.5-9 5.5L3 10.5Z" />
-          <path d="M6.5 12.5v4c0 .8 2.3 2.2 5.5 2.2s5.5-1.4 5.5-2.2v-4M21 10.5v5" />
-        </Svg>
-      );
-  }
 }
 
 function CourseIcon({
@@ -230,62 +138,6 @@ function HeaderIllustration() {
   );
 }
 
-function CategoryNavigation({
-  draft,
-  setDraft,
-}: {
-  draft: DiscoveryFilters;
-  setDraft: React.Dispatch<React.SetStateAction<DiscoveryFilters>>;
-}) {
-  return (
-    <nav aria-label="Course categories">
-      <ul className="-mx-1 flex snap-x gap-2.5 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0">
-        {LEVEL_NAV_ITEMS.map((item) => {
-          const active = draft.levels.includes(item.level);
-          return (
-            <li key={item.label} className="shrink-0 snap-start lg:shrink">
-              <button
-                type="button"
-                onClick={() =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    levels: active ? [] : [item.level],
-                  }))
-                }
-                aria-pressed={active}
-                className={`group flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition duration-200 lg:gap-2.5 lg:py-3.5 ${
-                  active
-                    ? "border-transparent bg-gradient-to-br from-[#440F76] to-[#5b1d95] text-white shadow-[0_12px_26px_rgba(68,15,118,0.28)]"
-                    : "border-[#eee8f6] bg-white text-[#1d1340] hover:border-[#dccdf0] hover:bg-[#faf7fe]"
-                }`}
-              >
-                <span
-                  className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition lg:h-10 lg:w-10 ${
-                    active ? "bg-white/15 text-white" : "bg-[#f3edfb] text-[#440F76]"
-                  }`}
-                >
-                  <LevelIcon type={item.icon} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block whitespace-nowrap text-sm font-bold leading-5 lg:whitespace-normal">{item.label}</span>
-                  <span className={`mt-0.5 block whitespace-nowrap text-[11px] ${active ? "text-white/75" : "text-slate-500"}`}>
-                    {item.badge}
-                  </span>
-                </span>
-                <ChevronIcon
-                  className={`hidden h-4 w-4 shrink-0 transition group-hover:translate-x-0.5 lg:block ${
-                    active ? "text-white" : "text-slate-400 group-hover:text-[#440F76]"
-                  }`}
-                />
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
-  );
-}
-
 const TILE_TONES = [
   { circle: "bg-[#ffe8f1]", icon: "text-[#e11d74]" },
   { circle: "bg-[#f1e8ff]", icon: "text-[#7c3aed]" },
@@ -300,10 +152,10 @@ function SmallBuildingIcon() {
   );
 }
 
-function CourseCard({ course, index }: { course: HomeCourse; index: number }) {
+function CourseCard({ course, index }: { course: DiscoveryCourse; index: number }) {
   const tone = TILE_TONES[index % TILE_TONES.length];
-  const icon = course.icon || CATEGORY_ICONS[course.category] || "cap";
-  const href = course.href || `/courses/${course.id}`;
+  const icon = CATEGORY_ICONS[course.category] || "cap";
+  const href = `/courses/${encodeURIComponent(course.slug || course.id)}`;
   const title = course.code ? `${course.studyMode} ${course.code}` : course.title;
   const count = course.universityCount;
 
@@ -341,77 +193,22 @@ function CourseCard({ course, index }: { course: HomeCourse; index: number }) {
   );
 }
 
-function CourseListItem({
-  course,
-  favorite,
-  onToggleFavorite,
-}: {
-  course: HomeCourse;
-  favorite: boolean;
-  onToggleFavorite: () => void;
-}) {
-  return (
-    <article className="flex flex-col gap-4 rounded-2xl border border-[#ece6f5] bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 items-start gap-4">
-        <div className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#f3edfb] text-[#440F76]">
-          <CourseIcon name={course.icon || CATEGORY_ICONS[course.category] || "cap"} />
-        </div>
-        <div className="min-w-0">
-          <h3 className="font-bold text-[#1d1340]">{course.title}</h3>
-          <p className="mt-1 text-sm text-slate-500">{course.eligibility || course.description || course.category}</p>
-          <p className="mt-2 text-xs text-slate-400">
-            {course.studyMode} · {course.level}
-            {course.fee > 0 ? ` · ${formatFee(course.fee)}` : ""}
-          </p>
-        </div>
-      </div>
-      <div className="flex shrink-0 items-center gap-3">
-        <button
-          type="button"
-          onClick={onToggleFavorite}
-          className={`rounded-lg p-2 ${favorite ? "text-[#440F76]" : "text-slate-300"}`}
-          aria-label="Save course"
-        >
-          <BookmarkIcon filled={favorite} />
-        </button>
-        <Link
-          href={course.href || `/courses/${course.id}`}
-          className="inline-flex min-h-10 items-center justify-center rounded-xl px-4 text-sm font-bold text-white"
-          style={{ backgroundColor: PRIMARY }}
-        >
-          {course.href ? "Compare →" : "View Details →"}
-        </Link>
-      </div>
-    </article>
-  );
-}
-
 export function CourseDiscoverySection() {
-  const [draftFilters, setDraftFilters] = useState<DiscoveryFilters>(INITIAL_FILTERS);
-  const [appliedFilters, setAppliedFilters] = useState<DiscoveryFilters>(INITIAL_FILTERS);
-  const [sortBy] = useState<SortOption>("popular");
-  const [viewMode] = useState<ViewMode>("grid");
-  const [favorites, setFavorites] = useState<string[]>([]);
   const [courses, setCourses] = useState<DiscoveryCourse[]>([]);
-  const [loadingCourses, setLoadingCourses] = useState(true);
-  const [coursesError, setCoursesError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
-      setLoadingCourses(true);
-      setCoursesError("");
       try {
         const data = await fetchDiscoveryCourses();
         if (!cancelled) setCourses(data);
       } catch (err) {
-        if (!cancelled) {
-          setCourses([]);
-          setCoursesError(err instanceof Error ? err.message : "Failed to load courses");
-        }
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load courses");
       } finally {
-        if (!cancelled) setLoadingCourses(false);
+        if (!cancelled) setLoading(false);
       }
     })();
 
@@ -419,33 +216,6 @@ export function CourseDiscoverySection() {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    setAppliedFilters(draftFilters);
-  }, [draftFilters]);
-
-  const allCourses = useMemo<HomeCourse[]>(() => {
-    const catalogTitles = new Set(HOME_PG_COURSES.map((course) => course.title.toLowerCase()));
-    return [
-      ...HOME_PG_COURSES,
-      ...courses.filter((course) => !catalogTitles.has(course.title.toLowerCase())),
-    ];
-  }, [courses]);
-
-  const filtered = useMemo(
-    () => sortCourses(filterCourses(allCourses, appliedFilters), sortBy),
-    [allCourses, appliedFilters, sortBy]
-  );
-
-  const clearFilters = () => {
-    setDraftFilters(DEFAULT_FILTERS);
-    setAppliedFilters(DEFAULT_FILTERS);
-  };
-
-  const activeNav = LEVEL_NAV_ITEMS.find((item) => appliedFilters.levels.includes(item.level));
-  const eyebrow = activeNav?.badge || "All Programs";
-  const highlight = activeNav?.heading || "All";
-  const showEmptyLoading = loadingCourses && filtered.length === 0;
 
   return (
     <section
@@ -458,13 +228,13 @@ export function CourseDiscoverySection() {
         <header className="flex items-center justify-between gap-6">
           <div className="max-w-2xl">
             <span className="inline-flex rounded-full bg-[#f1eafa] px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-[#440F76]">
-              {eyebrow}
+              All Programs
             </span>
             <h2
               id="course-discovery-heading"
               className="mt-4 text-[1.9rem] font-extrabold leading-[1.15] tracking-[-0.03em] text-[#1d1340] sm:text-[2.4rem] lg:text-[2.75rem]"
             >
-              Explore <span className="text-[#440F76]">{highlight}</span> Courses
+              Explore <span className="text-[#440F76]">Our</span> Courses
             </h2>
             <p className="mt-3 text-[15px] leading-7 text-slate-600 sm:text-base">
               Compare universities, explore programs and find the best course for your future.
@@ -473,62 +243,32 @@ export function CourseDiscoverySection() {
           <HeaderIllustration />
         </header>
 
-        <div className="mt-8 grid gap-5 lg:mt-10 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-5">
-          <aside className="min-w-0">
-            <div className="lg:sticky lg:top-24 lg:rounded-[20px] lg:border lg:border-[#eee8f6] lg:bg-white lg:p-3 lg:shadow-[0_12px_32px_rgba(40,20,80,0.06)]">
-              <CategoryNavigation draft={draftFilters} setDraft={setDraftFilters} />
+        <div className="mt-8 lg:mt-10">
+          {loading ? (
+            <div className="rounded-[20px] border border-[#ece6f5] bg-white px-6 py-16 text-center">
+              <p className="text-lg font-bold text-[#1d1340]">Loading courses…</p>
+              <p className="mt-2 text-sm text-slate-500">Fetching the latest programmes for you.</p>
             </div>
-          </aside>
-
-          <div className="min-w-0">
-            {showEmptyLoading ? (
-              <div className="rounded-[20px] border border-[#ece6f5] bg-white px-6 py-16 text-center">
-                <p className="text-lg font-bold text-[#1d1340]">Loading courses…</p>
-                <p className="mt-2 text-sm text-slate-500">Fetching the latest programmes for you.</p>
-              </div>
-            ) : coursesError && filtered.length === 0 ? (
-              <div className="rounded-[20px] border border-dashed border-red-200 bg-white px-6 py-16 text-center">
-                <p className="text-lg font-bold text-[#1d1340]">Couldn’t load courses</p>
-                <p className="mt-2 text-sm text-slate-500">{coursesError}</p>
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="rounded-[20px] border border-dashed border-[#dccdf0] bg-white px-6 py-16 text-center">
-                <p className="text-lg font-bold text-[#1d1340]">No courses in this category yet</p>
-                <p className="mt-2 text-sm text-slate-500">Try another category or browse all programmes.</p>
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="mt-5 inline-flex min-h-10 items-center rounded-xl px-5 text-sm font-bold text-white transition hover:-translate-y-0.5"
-                  style={{ backgroundColor: PRIMARY }}
-                >
-                  Show All Courses
-                </button>
-              </div>
-            ) : viewMode === "grid" ? (
-                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-                {filtered.map((course, index) => (
-                  <CourseCard
-                    key={course.id}
-                    course={course}
-                    index={index}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filtered.map((course) => (
-                  <CourseListItem
-                    key={course.id}
-                    course={course}
-                    favorite={favorites.includes(course.id)}
-                    onToggleFavorite={() => setFavorites((prev) => toggleValue(prev, course.id))}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          ) : error ? (
+            <div className="rounded-[20px] border border-dashed border-red-200 bg-white px-6 py-16 text-center">
+              <p className="text-lg font-bold text-[#1d1340]">Couldn’t load courses</p>
+              <p className="mt-2 text-sm text-slate-500">{error}</p>
+            </div>
+          ) : courses.length === 0 ? (
+            <div className="rounded-[20px] border border-dashed border-[#dccdf0] bg-white px-6 py-16 text-center">
+              <p className="text-lg font-bold text-[#1d1340]">No courses available yet</p>
+              <p className="mt-2 text-sm text-slate-500">Please check back soon.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+              {courses.map((course, index) => (
+                <CourseCard key={course.id} course={course} index={index} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </section>
   );
 }
+

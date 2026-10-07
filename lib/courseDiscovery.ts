@@ -32,6 +32,7 @@ export type DiscoveryCourse = {
   id: string;
   title: string;
   code?: string;
+  slug?: string;
   description: string;
   category: CourseCategory;
   level: CourseLevel;
@@ -46,6 +47,7 @@ export type DiscoveryCourse = {
   reviewed: number;
   createdAt: string;
   keywords: string[];
+  universityCount?: number;
 };
 
 export const COURSE_LEVELS: CourseLevel[] = [
@@ -557,6 +559,18 @@ export function sortCourses<T extends DiscoveryCourse>(courses: T[], sortBy: Sor
 }
 
 const COURSES_API_URL = "https://backend.admissionera.com/api/academic/courses";
+const COURSES_SUMMARY_API_URL = "https://backend.admissionera.com/api/academic/courses-with-all-content";
+
+type ApiCourseSummary = {
+  course_id?: string;
+  course_name?: string;
+  course_code?: string | null;
+  course_slug?: string | null;
+  course_degree?: string | null;
+  course_level?: string | null;
+  course_study_mode?: string | null;
+  university_count?: string | number | null;
+};
 
 const BADGE_TONES_CYCLE: DiscoveryCourse["badgeTone"][] = [
   "violet",
@@ -680,6 +694,7 @@ export type CourseSpecialization = {
 
 export type CourseDetail = {
   id: string;
+  slug: string;
   name: string;
   code: string;
   degree: string;
@@ -813,6 +828,27 @@ export function mapApiCourseToDiscovery(row: ApiCourse, index = 0): DiscoveryCou
   };
 }
 
+export function mapApiCourseSummaryToDiscovery(row: ApiCourseSummary, index = 0): DiscoveryCourse {
+  const universityCount = Number(row.university_count);
+  const course = mapApiCourseToDiscovery(
+    {
+      uuid: row.course_id,
+      name: row.course_name,
+      code: row.course_code,
+      degree: row.course_degree,
+      level: row.course_level,
+      study_mode: row.course_study_mode,
+    },
+    index,
+  );
+  return {
+    ...course,
+    slug: row.course_slug?.trim() || undefined,
+    universityCount: Number.isFinite(universityCount) ? universityCount : undefined,
+    keywords: [...course.keywords, row.course_slug || ""].filter(Boolean),
+  };
+}
+
 export function mapApiCourseToDetail(row: Record<string, unknown> = {}): CourseDetail {
   const faqs = Array.isArray(row.faqs) ? (row.faqs as CourseFaq[]) : [];
   const paragraphs = Array.isArray(row.course_content_paragraphs)
@@ -862,6 +898,7 @@ export function mapApiCourseToDetail(row: Record<string, unknown> = {}): CourseD
 
   return {
     id: String(row.uuid || row.id || ""),
+    slug: String(row.slug || ""),
     name: String(row.name || row.degree || row.code || "Untitled Course"),
     code: String(row.code || ""),
     degree: String(row.degree || ""),
@@ -893,7 +930,7 @@ function cryptoRandom() {
 }
 
 export async function fetchDiscoveryCourses(): Promise<DiscoveryCourse[]> {
-  const res = await fetch(COURSES_API_URL, {
+  const res = await fetch(COURSES_SUMMARY_API_URL, {
     headers: { Accept: "application/json" },
     cache: "no-store",
   });
@@ -903,18 +940,21 @@ export async function fetchDiscoveryCourses(): Promise<DiscoveryCourse[]> {
   }
 
   const payload = await res.json();
-  const rows: ApiCourse[] = Array.isArray(payload?.data)
-    ? payload.data
-    : Array.isArray(payload?.courses)
-      ? payload.courses
-      : [];
-
-  return rows
-    .filter((row) => row && row.is_deleted !== true)
-    .map((row, index) => mapApiCourseToDiscovery(row, index));
+return payload.data.map((row: ApiCourseSummary) => mapApiCourseSummaryToDiscovery(row));
 }
 
-export async function fetchCourseById(id: string): Promise<CourseDetail> {
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function resolveCourseUuid(idOrSlug: string) {
+  if (UUID_PATTERN.test(idOrSlug)) return idOrSlug;
+  const courses = await fetchDiscoveryCourses();
+  const match = courses.find((course) => course.slug === idOrSlug);
+  if (!match) throw new Error("Course not found");
+  return match.id;
+}
+
+export async function fetchCourseById(idOrSlug: string): Promise<CourseDetail> {
+  const id = await resolveCourseUuid(idOrSlug);
   const res = await fetch(`${COURSES_API_URL}/${encodeURIComponent(id)}`, {
     headers: { Accept: "application/json" },
     cache: "no-store",
