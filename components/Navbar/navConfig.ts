@@ -6,7 +6,7 @@ import {
   ToolsIcon,
   UniversitiesIcon,
 } from "@/components/icons";
-import { NAV_ITEMS, type NavItem } from "@/lib/navigation";
+import type { NavItem } from "@/lib/navigation";
 
 export const NAV_ICONS: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
   Home: HomeIcon,
@@ -16,4 +16,12 @@ export const NAV_ICONS: Record<string, ComponentType<SVGProps<SVGSVGElement>>> =
   "About Us": AboutIcon,
 };
 
-export const PRIMARY_NAV: NavItem[] = [{ label: "Home", href: "/" }, ...NAV_ITEMS];
+export const PRIMARY_NAV: NavItem[] = [
+  { label: "Colleges", href: "/universities" },
+  { label: "Courses", href: "/programs" },
+  { label: "Exams", href: "/search?q=Exams" },
+  { label: "Admission", href: "/programs" },
+  { label: "Scholarships", href: "/search?q=Scholarships" },
+  { label: "Guidance", href: "/tools" },
+  { label: "Resources", href: "/about" },
+];

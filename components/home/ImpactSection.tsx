@@ -278,7 +278,7 @@ function FindScholarships() {
 function PopularThisMonth() {
   return (
     <div className="min-w-0">
-      <PanelHeader title="Popular This Month" subtitle="What students are exploring." />
+      <PanelHeader title="Popular This Month" subtitle="Sample search counts, not live analytics." />
       <ol className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-1">
         {POPULAR_COURSES.map((course, index) => (
           <PopularCourseRow key={course.name} course={course} rank={index + 1} />

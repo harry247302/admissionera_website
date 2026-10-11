@@ -8,22 +8,26 @@ import { TestimonialsSection } from "@/components/home/TestimonialsSection";
 import { CTASection } from "@/components/home/CTASection";
 import { BlogSection } from "@/components/home/BlogSection";
 import { TopUniversitiesSection } from "@/components/home/TopUniversitiesSection";
+import { FeaturedVideosSection } from "@/components/home/FeaturedVideosSection";
+import { CompareEligibilitySection } from "@/components/home/CompareEligibilitySection";
+import { FinalCtaBanner } from "@/components/home/FinalCtaBanner";
 
 export default function Home() {
   return (
     <main id="main" className="flex-1 bg-white">
       <HeroCarousel />
-
       <CourseDiscoverySection />
-
-      <BenefitsSection />
-      <TopUniversitiesSection />
       <AboutSection />
+      <TopUniversitiesSection />
       <CoursesSection />
+      <CompareEligibilitySection />
+      <BenefitsSection />
       <ImpactSection />
-      <TestimonialsSection />
       <CTASection />
+      <TestimonialsSection />
       <BlogSection />
+      <FeaturedVideosSection />
+      <FinalCtaBanner />
     </main>
   );
 }

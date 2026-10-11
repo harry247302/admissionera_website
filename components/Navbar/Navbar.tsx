@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
-import { MenuIcon, SparkleIcon, UserIcon } from "@/components/icons";
+import { MenuIcon } from "@/components/icons";
 import { PRIMARY_NAV, NAV_ICONS } from "@/components/Navbar/navConfig";
 import { DropdownMenu } from "@/components/Navbar/DropdownMenu";
 import { MobileDrawer } from "@/components/Navbar/MobileDrawer";
@@ -107,26 +107,16 @@ export function Navbar() {
 
         <div className="ml-auto flex items-center gap-2 sm:gap-2.5">
           <Link
-            href="/compare"
-            className="ai-cta hidden min-[920px]:flex"
-            aria-label="AI-powered university comparison in two minutes"
+            href="/signin"
+            className="hidden h-9 items-center rounded-lg border border-[#35066F] px-3.5 text-[13px] font-semibold text-[#35066F] transition hover:bg-[#F1ECFF] sm:inline-flex"
           >
-            <span className="ai-cta-icon">
-              <SparkleIcon className="h-4 w-4" />
-            </span>
-            <span className="pr-1 leading-tight">
-              <span className="block text-[12px] font-semibold text-[#FF2D8E]">
-                AI-Powered
-              </span>
-              <span className="block text-[11px] font-medium text-[#55556A]">
-                Compare in 2 mins
-              </span>
-            </span>
+            Login
           </Link>
-
-          <Link href="/signin" className="nav-signin hidden sm:inline-flex">
-            <UserIcon className="h-4 w-4" />
-            Sign In
+          <Link
+            href="/signin"
+            className="hidden h-9 items-center rounded-lg bg-[#35066F] px-3.5 text-[13px] font-semibold text-white transition hover:bg-[#4A0A96] sm:inline-flex"
+          >
+            Register
           </Link>
 
           <div className="hidden lg:block">
