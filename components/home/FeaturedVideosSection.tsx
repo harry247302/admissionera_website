@@ -42,99 +42,102 @@ function thumbnail(id: string) {
 export function FeaturedVideosSection() {
   const [activeId, setActiveId] = useState(VIDEOS[0].id);
   const active = VIDEOS.find((video) => video.id === activeId) ?? VIDEOS[0];
-  const upNext = VIDEOS.filter((video) => video.id !== active.id);
+  const marqueeVideos = [...VIDEOS, ...VIDEOS];
 
   return (
-    <section aria-labelledby="featured-videos-heading" className="w-full">
+    <section aria-labelledby="featured-videos-heading" className="w-full bg-[#0e1628]">
       <h2 id="featured-videos-heading" className="sr-only">
         Featured videos
       </h2>
-      <div className="relative isolate w-full overflow-hidden bg-[#0e1628] sm:min-h-[560px]">
-          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-            <iframe
-              key={active.id}
-              src={embedUrl(active.id)}
-              title={active.title}
-              allow="autoplay; encrypted-media; picture-in-picture"
-              className="absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0"
-              tabIndex={-1}
-            />
+
+      <div className="relative isolate h-[420px] w-full overflow-hidden sm:h-[520px] lg:h-[620px]">
+        <iframe
+          key={active.id}
+          src={embedUrl(active.id)}
+          title={active.title}
+          allow="autoplay; encrypted-media; picture-in-picture"
+          className="absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0"
+          tabIndex={-1}
+        />
+
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(14,22,40,0.18)_0%,transparent_38%,rgba(14,22,40,0.88)_100%)]" />
+
+        <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-3 p-4 sm:p-6 lg:px-8">
+          <div className="max-w-xl text-white">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
+              Now Playing
+            </p>
+            <h3 className="mt-1 text-xl font-bold sm:text-2xl lg:text-3xl">{active.title}</h3>
+            <a
+              href={watchUrl(active.id)}
+              target="_blank"
+              rel="noreferrer"
+              className="pointer-events-auto mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-[13px] font-semibold text-[#121826] transition hover:bg-[#F3F5FF]"
+            >
+              Play Full Video
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#121826] text-white">
+                <svg viewBox="0 0 24 24" className="ml-0.5 h-3 w-3" fill="currentColor" aria-hidden>
+                  <path d="M8 5v14l11-7Z" />
+                </svg>
+              </span>
+            </a>
           </div>
-          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(8,14,28,0.55)_0%,rgba(8,14,28,0.12)_46%,rgba(8,14,28,0.28)_100%)]" />
+          <Link
+            href="/universities"
+            className="pointer-events-auto hidden h-10 shrink-0 items-center gap-2 rounded-full bg-[#2F6BFF] px-4 text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(47,107,255,0.35)] transition hover:bg-[#1E57E8] sm:inline-flex"
+          >
+            Discover Universities
+          </Link>
+        </div>
 
-          <div className="relative z-10 flex min-h-[640px] flex-col justify-between gap-4 p-3 sm:min-h-[560px] sm:p-5 lg:p-6">
-            <div className="flex items-start justify-between gap-3">
-              <div className="w-full max-w-[360px] rounded-[22px] border border-white/10 bg-[#141c2e]/80 p-3 text-white shadow-[0_16px_40px_rgba(0,0,0,0.28)] backdrop-blur-md">
-                <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">
-                  Now Playing
-                </p>
-                <div className="mt-2 flex items-center gap-3 rounded-2xl bg-white/5 p-2">
-                  <img
-                    src={thumbnail(active.id)}
-                    alt=""
-                    className="h-12 w-[72px] shrink-0 rounded-lg object-cover"
-                  />
-                  <p className="min-w-0 flex-1 text-[13px] font-bold leading-snug">{active.title}</p>
-                </div>
-                <a
-                  href={watchUrl(active.id)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 inline-flex h-9 items-center gap-2 rounded-full bg-white px-4 text-[13px] font-semibold text-[#121826] transition hover:bg-[#F3F5FF]"
-                >
-                  Play Full Video
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#121826] text-white">
-                    <svg viewBox="0 0 24 24" className="ml-0.5 h-3 w-3" fill="currentColor" aria-hidden>
-                      <path d="M8 5v14l11-7Z" />
-                    </svg>
-                  </span>
-                </a>
-
-                <p className="mb-2 mt-4 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">
-                  Up Next
-                </p>
-                <ul className="max-h-[250px] space-y-2 overflow-y-auto pr-1 [scrollbar-width:thin]">
-                  {upNext.map((video) => (
-                    <li key={video.id}>
-                      <button
-                        type="button"
-                        onClick={() => setActiveId(video.id)}
-                        className="flex w-full items-center gap-2.5 rounded-xl bg-[#1c263c] p-1.5 text-left transition hover:bg-[#24324d]"
-                      >
+        <div className="absolute inset-x-0 bottom-0 z-10 overflow-hidden p-3 sm:p-4 lg:p-5">
+          <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70">
+            Up Next
+          </p>
+          <div className="overflow-hidden">
+            <ul className="featured-video-marquee">
+              {marqueeVideos.map((video, index) => {
+                const isActive = video.id === active.id;
+                return (
+                  <li key={`${video.id}-${index}`} className="shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setActiveId(video.id)}
+                      aria-pressed={isActive}
+                      className={`flex w-[240px] items-center gap-2.5 rounded-2xl border p-1.5 text-left text-white shadow-[0_10px_24px_rgba(0,0,0,0.28)] backdrop-blur-md transition sm:w-[260px] ${
+                        isActive
+                          ? "border-blue-400/70 bg-[#141c2e]/95"
+                          : "border-white/10 bg-[#141c2e]/80 hover:border-white/25 hover:bg-[#1c263c]/90"
+                      }`}
+                    >
+                      <span className="relative shrink-0">
                         <img
                           src={thumbnail(video.id)}
                           alt=""
-                          className="h-11 w-[68px] shrink-0 rounded-lg object-cover"
+                          className="h-12 w-[72px] rounded-lg object-cover sm:h-[52px] sm:w-[80px]"
                         />
-                        <span className="min-w-0 flex-1 text-[12px] font-semibold leading-snug text-white/95">
-                          {video.title}
-                        </span>
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-white">
-                          <svg viewBox="0 0 24 24" className="ml-0.5 h-3 w-3" fill="currentColor" aria-hidden>
+                        <span className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/20">
+                          <svg viewBox="0 0 24 24" className="ml-0.5 h-3 w-3 text-white" fill="currentColor" aria-hidden>
                             <path d="M8 5v14l11-7Z" />
                           </svg>
                         </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className="flex justify-center pb-1">
-              <Link
-                href="/universities"
-                className="inline-flex h-10 items-center gap-2 rounded-full bg-[#2F6BFF] px-4 text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(47,107,255,0.35)] transition hover:bg-[#1E57E8]"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                  <circle cx="12" cy="12" r="8" />
-                  <path d="M4 12h16M12 4c2.2 2.4 2.2 13.6 0 16M12 4c-2.2 2.4-2.2 13.6 0 16" strokeLinecap="round" />
-                </svg>
-                Discover the universities we have for you.
-              </Link>
-            </div>
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="line-clamp-2 text-[12px] font-semibold leading-snug">{video.title}</span>
+                        <span className={`mt-0.5 block text-[10px] font-medium ${isActive ? "text-blue-300" : "text-white/50"}`}>
+                          {isActive ? "Now Playing" : "Watch Video"}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
+        </div>
       </div>
     </section>
   );
 }
+
+export default FeaturedVideosSection;

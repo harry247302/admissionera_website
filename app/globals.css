@@ -627,6 +627,34 @@ input {
   animation: eraAiFloat 3.5s ease-in-out infinite;
 }
 
+.featured-video-marquee {
+  display: flex;
+  width: max-content;
+  gap: 0.75rem;
+  animation: featuredVideoMarquee 32s linear infinite;
+  will-change: transform;
+}
+
+.featured-video-marquee:hover,
+.featured-video-marquee:focus-within {
+  animation-play-state: paused;
+}
+
+@keyframes featuredVideoMarquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .featured-video-marquee {
+    animation: none;
+  }
+}
+
 @keyframes eraAiFloat {
   0%,
   100% {

@@ -19,7 +19,7 @@ type Scholarship = {
   amount: string;
   eligibility: string;
   icon: ReactNode;
-  iconTone: string;
+  button: string;
 };
 
 type PopularCourse = {
@@ -31,8 +31,8 @@ const DEADLINE_FILTERS: DeadlineFilter[] = ["All", "UG", "PG", "MBA", "Engineeri
 
 const DEADLINES: Deadline[] = [
   { title: "DU Admission", stage: "Undergraduate", date: "15 June 2027", daysLeft: 24, categories: ["UG"] },
-  { title: "CUET 2027", stage: "Registration", date: "30 June 2027", daysLeft: 30, categories: ["UG"] },
-  { title: "JEE Main 2027", stage: "Application", date: "10 July 2027", daysLeft: 48, categories: ["UG", "Engineering"] },
+  { title: "CUET 2027", stage: "Registration", date: "30 June 2027", daysLeft: 32, categories: ["UG"] },
+  { title: "JEE Main 2027", stage: "Application", date: "10 July 2027", daysLeft: 44, categories: ["UG", "Engineering"] },
   { title: "CAT 2027", stage: "Registration", date: "20 Sept 2027", daysLeft: 62, categories: ["PG", "MBA"] },
   { title: "NEET UG 2027", stage: "Application", date: "12 Mar 2027", daysLeft: 71, categories: ["UG", "Medical"] },
   { title: "GATE 2028", stage: "Application", date: "28 Sept 2027", daysLeft: 80, categories: ["PG", "Engineering"] },
@@ -40,51 +40,69 @@ const DEADLINES: Deadline[] = [
   { title: "XAT 2028", stage: "Registration", date: "30 Nov 2027", daysLeft: 104, categories: ["MBA"] },
 ];
 
+const PRIMARY_BUTTON = "bg-[#2A0B5C] hover:bg-[#3B1380] shadow-[0_4px_10px_rgba(42,11,92,0.22)]";
+const PINK_BUTTON = "bg-[#F20D70] hover:bg-[#D40B62] shadow-[0_4px_10px_rgba(242,13,112,0.22)]";
+
 const SCHOLARSHIPS: Scholarship[] = [
   {
     title: "Merit Scholarship",
     amount: "Up to ₹50,000",
     eligibility: "75%+ in 12th",
-    iconTone: "bg-[#FFF1E6] text-[#F97316]",
+    button: PRIMARY_BUTTON,
     icon: (
-      <>
-        <circle cx="12" cy="8" r="6" />
-        <path d="M15.48 12.89 17 22l-5-3-5 3 1.52-9.11" />
-      </>
+      <svg viewBox="0 0 32 32" className="h-9 w-9" aria-hidden>
+        <circle cx="16" cy="7.5" r="5" fill="#F97316" />
+        <path d="M5 30v-3.5A8.5 8.5 0 0 1 13.5 18h5a8.5 8.5 0 0 1 8.5 8.5V30Z" fill="#F97316" />
+        <path d="m13 18 3 5 3-5" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinejoin="round" />
+        <circle cx="16" cy="25.5" r="3.4" fill="#FBBF24" stroke="#fff" strokeWidth="1.2" />
+        <path d="m16 23.8.6 1.2 1.3.2-.95.9.22 1.3-1.17-.62-1.17.62.22-1.3-.95-.9 1.3-.2Z" fill="#fff" />
+      </svg>
     ),
   },
   {
     title: "Need Based",
     amount: "Up to ₹1,00,000",
-    eligibility: "Family income < 5L",
-    iconTone: "bg-[#E8F1FF] text-[#2563EB]",
+    eligibility: "Family Income < 5L",
+    button: PINK_BUTTON,
     icon: (
-      <>
-        <circle cx="12" cy="7" r="4" />
-        <path d="M5 21v-2a7 7 0 0 1 14 0v2" />
-      </>
+      <svg viewBox="0 0 32 32" className="h-9 w-9" aria-hidden>
+        <path d="M13 2h6v6h-6Z" fill="#1D4ED8" />
+        <rect x="5.5" y="5.5" width="21" height="25" rx="3" fill="#2563EB" />
+        <rect x="12" y="4" width="8" height="4" rx="1.2" fill="#93C5FD" />
+        <circle cx="16" cy="15" r="3.6" fill="#fff" />
+        <path d="M9.5 26a6.5 6.5 0 0 1 13 0Z" fill="#fff" />
+      </svg>
     ),
   },
   {
     title: "State Scholarship",
-    amount: "Up to ₹75,000",
+    amount: "Up to ₹50,000",
     eligibility: "State Government",
-    iconTone: "bg-[#E6F7F4] text-[#0F9488]",
+    button: PINK_BUTTON,
     icon: (
-      <>
-        <path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7" />
-        <path d="m12 2 8 5H4Z" />
-      </>
+      <svg viewBox="0 0 32 32" className="h-9 w-9" aria-hidden>
+        <path d="M16 17V10" stroke="#15803D" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M16 11.5C16 6.5 12.5 3.5 7 3.5c0 5 3.5 8 9 8Z" fill="#22C55E" />
+        <path d="M16 13c0-5 3.5-8 9-8 0 5-3.5 8-9 8Z" fill="#16A34A" />
+        <path
+          d="M2 20.5h4.5c1.6 0 3.1.5 4.4 1.4l1.6 1.1h5.3a2 2 0 0 1 0 4h-6.3M2 29h12.5c1.4 0 2.8-.4 4-1.1l8.8-5.3a2.2 2.2 0 0 0-2.3-3.8l-6.6 3.7"
+          fill="none"
+          stroke="#16A34A"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
     ),
   },
 ];
 
 const POPULAR_COURSES: PopularCourse[] = [
   { name: "BCA", searches: 12450 },
-  { name: "MBA", searches: 10820 },
-  { name: "B.Tech", searches: 9540 },
-  { name: "BBA", searches: 8010 },
-  { name: "MBBS", searches: 7600 },
+  { name: "MBA", searches: 10320 },
+  { name: "B.Tech", searches: 9560 },
+  { name: "BBA", searches: 6820 },
+  { name: "MBBS", searches: 7660 },
 ];
 
 const searchHref = (query: string) => `/search?q=${encodeURIComponent(query)}`;
@@ -118,13 +136,15 @@ function PanelHeader({
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <h2 className="text-[17px] font-bold leading-tight text-[#172033] sm:text-lg">{title}</h2>
-        <p className="mt-1 text-[12.5px] text-[#7B8494]">{subtitle}</p>
+        <h2 className="text-[19px] font-extrabold leading-tight tracking-tight text-[#1B1446] sm:text-[21px]">
+          {title}
+        </h2>
+        <p className="mt-0.5 text-[12.5px] text-[#667085]">{subtitle}</p>
       </div>
       {viewAllHref ? (
         <Link
           href={viewAllHref}
-          className="mt-0.5 inline-flex shrink-0 items-center gap-1.5 text-[12px] font-semibold text-[#B5122A] transition hover:gap-2 hover:text-[#8F0E21]"
+          className="mt-1 inline-flex shrink-0 items-center gap-1.5 text-[12.5px] font-semibold text-[#E6176F] transition hover:gap-2 hover:text-[#C20E5C]"
         >
           View All
           <Svg className="h-3.5 w-3.5">
@@ -140,24 +160,23 @@ const CARD_ROW =
   "-mx-1 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden";
 
 const CARD_BASE =
-  "min-w-[150px] flex-1 snap-start rounded-[11px] border border-[#E5E9F0] bg-white p-3 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(23,32,51,0.07)] sm:min-w-0";
+  "min-w-[150px] flex-1 snap-start rounded-xl border p-3 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(27,20,70,0.07)] sm:min-w-0";
 
 function DeadlineCard({ deadline }: { deadline: Deadline }) {
   return (
-    <article className={`${CARD_BASE} flex flex-col`}>
-      <h3 className="truncate text-[13.5px] font-bold text-[#172033]">{deadline.title}</h3>
-      <p className="mt-0.5 text-[11.5px] text-[#7B8494]">{deadline.stage}</p>
-      <p className="mt-1.5 text-[11.5px] text-[#7B8494]">Deadline</p>
-      <p className="text-[13px] font-bold text-[#B5122A]">{deadline.date}</p>
-      <p className="mt-1.5 flex items-center gap-1 text-[12px] font-semibold text-[#EA580C]">
-        <Svg className="h-3.5 w-3.5">
-          <path d="M6 2h12M6 22h12M7 2v4a5 5 0 0 0 10 0V2M7 22v-4a5 5 0 0 1 10 0v4" />
-        </Svg>
+    <article className={`${CARD_BASE} flex flex-col border-[#EEEEF4] bg-[#F7F7FA]`}>
+      <h3 className="truncate text-[13px] font-bold text-[#1B1446]">{deadline.title}</h3>
+      <p className="text-[11.5px] text-[#667085]">{deadline.stage}</p>
+      <p className="text-[12px] font-medium text-[#1B1446]">{deadline.date}</p>
+      <p className="mt-1 flex items-center gap-1 text-[12px] font-bold text-[#E11D48]">
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor" aria-hidden>
+          <path d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm13 8H4v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-9Z" />
+        </svg>
         {deadline.daysLeft} Days Left
       </p>
       <Link
         href={searchHref(deadline.title)}
-        className="mt-3 inline-flex h-8 w-full items-center justify-center rounded-[7px] border border-[#F3B7C0] bg-[#FFF1F3] text-[11.5px] font-semibold text-[#B5122A] transition hover:border-[#B5122A] hover:bg-[#FFE4E8]"
+        className="mt-3 inline-flex h-8 items-center justify-center self-center rounded-lg bg-[#FFE3EE] px-4 text-[11.5px] font-semibold text-[#E6176F] transition hover:bg-[#FFD0E2]"
       >
         View Details
       </Link>
@@ -167,20 +186,14 @@ function DeadlineCard({ deadline }: { deadline: Deadline }) {
 
 function ScholarshipCard({ scholarship }: { scholarship: Scholarship }) {
   return (
-    <article className={`${CARD_BASE} flex flex-col items-center text-center`}>
-      <span
-        className={`flex h-12 w-12 items-center justify-center rounded-full ${scholarship.iconTone}`}
-      >
-        <Svg className="h-6 w-6">{scholarship.icon}</Svg>
-      </span>
-      <h3 className="mt-2.5 text-[13px] font-bold leading-snug text-[#172033]">
-        {scholarship.title}
-      </h3>
-      <p className="mt-1 text-[12.5px] font-bold text-[#B5122A]">{scholarship.amount}</p>
-      <p className="mb-3 mt-1 text-[11px] text-[#7B8494]">{scholarship.eligibility}</p>
+    <article className={`${CARD_BASE} flex flex-col items-center border-[#ECEEF3] bg-white px-2 pb-2 pt-3.5 text-center shadow-[0_2px_8px_rgba(27,20,70,0.04)]`}>
+      {scholarship.icon}
+      <h3 className="mt-2 whitespace-nowrap text-[12.5px] font-bold leading-snug text-[#1B1446]">{scholarship.title}</h3>
+      <p className="whitespace-nowrap text-[11.5px] text-[#344054]">{scholarship.amount}</p>
+      <p className="mb-2.5 whitespace-nowrap text-[11px] text-[#667085]">{scholarship.eligibility}</p>
       <Link
         href={searchHref(scholarship.title)}
-        className="mt-auto inline-flex h-8 w-full items-center justify-center rounded-[7px] bg-[#B5122A] text-[11.5px] font-semibold text-white shadow-[0_4px_10px_rgba(181,18,42,0.2)] transition hover:bg-[#9A0F24]"
+        className={`mt-auto inline-flex h-8 w-full items-center justify-center rounded-md text-[11.5px] font-semibold text-white transition ${scholarship.button}`}
       >
         Check Eligibility
       </Link>
@@ -193,13 +206,13 @@ function PopularCourseRow({ course, rank }: { course: PopularCourse; rank: numbe
     <li>
       <Link
         href={searchHref(course.name)}
-        className="flex items-center gap-3 rounded-lg bg-[#F7F8FB] px-3 py-2.5 transition hover:bg-[#FFF1F3]"
+        className="flex items-center gap-3 rounded-lg px-1.5 py-1.5 transition hover:bg-[#FFF1F6]"
       >
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#FFE4E8] text-[11.5px] font-bold text-[#B5122A]">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#FFE4EE] text-[11.5px] font-bold text-[#E11D48]">
           {rank}
         </span>
-        <span className="text-[13px] font-bold text-[#172033]">{course.name}</span>
-        <span className="text-[11.5px] text-[#7B8494]">
+        <span className="w-14 shrink-0 text-[13px] font-bold text-[#1B1446]">{course.name}</span>
+        <span className="text-[12px] text-[#667085]">
           {course.searches.toLocaleString("en-US")} searches
         </span>
       </Link>
@@ -226,10 +239,11 @@ function UpcomingDeadlines() {
       <div
         role="tablist"
         aria-label="Filter deadlines"
-        className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="mt-3 flex max-w-full overflow-x-auto rounded-lg border border-[#ECEEF3] bg-white p-[3px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {DEADLINE_FILTERS.map((item) => {
+        {DEADLINE_FILTERS.map((item, index) => {
           const active = item === filter;
+          const afterActive = index > 0 && DEADLINE_FILTERS[index - 1] === filter;
           return (
             <button
               key={item}
@@ -237,10 +251,14 @@ function UpcomingDeadlines() {
               role="tab"
               aria-selected={active}
               onClick={() => setFilter(item)}
-              className={`h-8 shrink-0 rounded-md px-3.5 text-[12px] font-medium transition ${
+              className={`relative h-7 shrink-0 grow rounded-md px-3 text-[11.5px] font-medium transition ${
                 active
-                  ? "bg-[#B5122A] text-white shadow-[0_4px_10px_rgba(181,18,42,0.22)]"
-                  : "bg-[#F2F4F7] text-[#344054] hover:bg-[#E7EAF0]"
+                  ? "bg-[#F20D70] text-white shadow-[0_3px_8px_rgba(242,13,112,0.25)]"
+                  : "text-[#344054] hover:text-[#E6176F]"
+              } ${
+                index > 0 && !active && !afterActive
+                  ? "before:absolute before:left-0 before:top-1/2 before:h-3.5 before:w-px before:-translate-y-1/2 before:bg-[#E4E7EC]"
+                  : ""
               }`}
             >
               {item}
@@ -249,7 +267,7 @@ function UpcomingDeadlines() {
         })}
       </div>
 
-      <div className={`mt-3.5 ${CARD_ROW}`}>
+      <div className={`mt-3 ${CARD_ROW}`}>
         {visible.map((deadline) => (
           <DeadlineCard key={deadline.title} deadline={deadline} />
         ))}
@@ -266,7 +284,7 @@ function FindScholarships() {
         subtitle="Financial support for your education."
         viewAllHref={searchHref("Scholarships")}
       />
-      <div className={`mt-4 ${CARD_ROW}`}>
+      <div className={`mt-3 ${CARD_ROW}`}>
         {SCHOLARSHIPS.map((scholarship) => (
           <ScholarshipCard key={scholarship.title} scholarship={scholarship} />
         ))}
@@ -278,8 +296,8 @@ function FindScholarships() {
 function PopularThisMonth() {
   return (
     <div className="min-w-0">
-      <PanelHeader title="Popular This Month" subtitle="Sample search counts, not live analytics." />
-      <ol className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-1">
+      <PanelHeader title="Popular This Month" subtitle="What students are exploring." />
+      <ol className="mt-3  grid gap-1.5 md:grid-cols-2 min-[72rem]:grid-cols-1">
         {POPULAR_COURSES.map((course, index) => (
           <PopularCourseRow key={course.name} course={course} rank={index + 1} />
         ))}
@@ -290,15 +308,11 @@ function PopularThisMonth() {
 
 export function ImpactSection() {
   return (
-    <section className="bg-white py-10 sm:py-12" aria-label="Deadlines, scholarships and popular courses">
-      <div className="era-shell grid grid-cols-[minmax(0,1fr)] gap-8 md:grid-cols-2 md:gap-x-6 xl:grid-cols-[38fr_38fr_24fr] xl:gap-0">
-        <div className="xl:pr-6">
-          <UpcomingDeadlines />
-        </div>
-        <div className="md:border-l md:border-[#EEF1F5] md:pl-6 xl:px-6">
-          <FindScholarships />
-        </div>
-        <div className="border-t border-[#EEF1F5] pt-8 md:col-span-2 xl:col-span-1 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
+    <section className="py-10 sm:py-12" aria-label="Deadlines, scholarships and popular courses">
+      <div className="era-shell grid grid-cols-[minmax(0,1fr)] gap-8 md:grid-cols-2 md:gap-x-6 min-[72rem]:grid-cols-[38fr_36fr_26fr] min-[72rem]:gap-x-7">
+        <UpcomingDeadlines />
+        <FindScholarships />
+        <div className="md:col-span-2 min-[72rem]:col-span-1">
           <PopularThisMonth />
         </div>
       </div>

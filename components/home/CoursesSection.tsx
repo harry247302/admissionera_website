@@ -6,35 +6,27 @@ type CareerCategory = {
   courses: [string, string, string];
   href: string;
   card: string;
-  iconBox: string;
-  arrow: string;
+  accent: string;
+  dot: string;
   icon: ReactNode;
 };
 
-const iconProps = {
-  viewBox: "0 0 24 24",
-  fill: "currentColor",
-  fillOpacity: 0.18,
-  className: "h-6 w-6",
-  "aria-hidden": true,
-  stroke: "currentColor",
-  strokeWidth: 1.8,
-  strokeLinecap: "round" as const,
-  strokeLinejoin: "round" as const,
-};
+const iconClass = "h-[26px] w-[26px]";
 
 const CATEGORIES: CareerCategory[] = [
   {
     name: "Engineering",
     courses: ["B.Tech", "M.Tech", "Diploma"],
     href: "/programs/undergraduate",
-    card: "bg-gradient-to-br from-white via-sky-50/60 to-sky-100/70 border-sky-100 hover:border-sky-300",
-    iconBox: "bg-blue-100/80 text-blue-600",
-    arrow: "text-blue-600",
+    card: "border-[#E3EAFB] bg-gradient-to-br from-[#F8FAFF] to-[#EAF0FE] hover:border-[#BFD0F7]",
+    accent: "text-[#2563EB]",
+    dot: "bg-[#2563EB]",
     icon: (
-      <svg {...iconProps}>
-        <circle cx="12" cy="12" r="3" />
-        <path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8" />
+      <svg viewBox="0 0 24 24" className={iconClass} fill="currentColor" aria-hidden>
+        <path
+          fillRule="evenodd"
+          d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2ZM15 12a3 3 0 1 0-6 0 3 3 0 0 0 6 0Z"
+        />
       </svg>
     ),
   },
@@ -42,13 +34,23 @@ const CATEGORIES: CareerCategory[] = [
     name: "Management",
     courses: ["BBA", "MBA", "PGDM"],
     href: "/programs/postgraduate",
-    card: "bg-gradient-to-br from-white via-rose-50/60 to-rose-100/70 border-rose-100 hover:border-rose-300",
-    iconBox: "bg-red-100/80 text-red-600",
-    arrow: "text-red-600",
+    card: "border-[#FBE3E9] bg-gradient-to-br from-[#FFF9FA] to-[#FDECF0] hover:border-[#F6BFCC]",
+    accent: "text-[#E11D48]",
+    dot: "bg-[#E11D48]",
     icon: (
-      <svg {...iconProps}>
-        <rect x="3.5" y="7" width="17" height="12.5" rx="2" />
-        <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3.5 12.5h17" />
+      <svg viewBox="0 0 24 24" className={iconClass} fill="currentColor" aria-hidden>
+        <circle cx="7" cy="4.5" r="2.5" />
+        <path d="M3 21v-7.5A3.5 3.5 0 0 1 6.5 10h1A3.5 3.5 0 0 1 11 13.5V21H3Z" />
+        <rect x="12.5" y="14" width="3" height="7" rx="0.8" />
+        <rect x="17" y="10" width="3" height="11" rx="0.8" />
+        <path
+          d="m12 9 3.5-3.5 2 2L21.5 3.5M18.5 3.5h3v3"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     ),
   },
@@ -56,14 +58,23 @@ const CATEGORIES: CareerCategory[] = [
     name: "Medical",
     courses: ["MBBS", "BDS", "Nursing"],
     href: "/programs/undergraduate",
-    card: "bg-gradient-to-br from-white via-emerald-50/60 to-emerald-100/70 border-emerald-100 hover:border-emerald-300",
-    iconBox: "bg-teal-100/80 text-teal-600",
-    arrow: "text-teal-600",
+    card: "border-[#DDF3E6] bg-gradient-to-br from-[#F7FDF9] to-[#E6F7EE] hover:border-[#B5E5CA]",
+    accent: "text-[#16A34A]",
+    dot: "bg-[#16A34A]",
     icon: (
-      <svg {...iconProps}>
-        <path d="M6 4v5a4 4 0 0 0 8 0V4" />
-        <path d="M10 13v2a4 4 0 0 0 8 0v-1.5" />
-        <circle cx="18" cy="11.5" r="2" />
+      <svg
+        viewBox="0 0 24 24"
+        className={iconClass}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <path d="M11 2v2M5 2v2M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1" />
+        <path d="M8 15a6 6 0 0 0 12 0v-3" />
+        <circle cx="20" cy="10" r="2" />
       </svg>
     ),
   },
@@ -71,12 +82,21 @@ const CATEGORIES: CareerCategory[] = [
     name: "Commerce",
     courses: ["B.Com", "M.Com", "CA"],
     href: "/programs/postgraduate",
-    card: "bg-gradient-to-br from-white via-orange-50/60 to-orange-100/70 border-orange-100 hover:border-orange-300",
-    iconBox: "bg-orange-100/80 text-orange-500",
-    arrow: "text-orange-500",
+    card: "border-[#FCEBDD] bg-gradient-to-br from-[#FFFBF7] to-[#FEF1E6] hover:border-[#F8CFAE]",
+    accent: "text-[#F97316]",
+    dot: "bg-[#F97316]",
     icon: (
-      <svg {...iconProps}>
-        <path d="M4 20V10M10 20V5M16 20v-7M21 20H3" />
+      <svg viewBox="0 0 24 24" className={iconClass} aria-hidden>
+        <circle cx="12" cy="12" r="10" fill="currentColor" />
+        <circle cx="12" cy="12" r="7.2" fill="none" stroke="#fff" strokeWidth="1.2" opacity="0.7" />
+        <path
+          d="M9 8h6M9 10.5h6M11 8c3.2 0 3.2 5 0 5H9.5l4.5 4"
+          fill="none"
+          stroke="#fff"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     ),
   },
@@ -84,12 +104,18 @@ const CATEGORIES: CareerCategory[] = [
     name: "Law",
     courses: ["LLB", "LLM", "BA LLB"],
     href: "/programs/undergraduate",
-    card: "bg-gradient-to-br from-white via-violet-50/60 to-violet-100/70 border-violet-100 hover:border-violet-300",
-    iconBox: "bg-violet-100/80 text-violet-600",
-    arrow: "text-violet-600",
+    card: "border-[#E9E4FB] bg-gradient-to-br from-[#FAF9FF] to-[#EFEBFD] hover:border-[#CFC4F6]",
+    accent: "text-[#7C3AED]",
+    dot: "bg-[#7C3AED]",
     icon: (
-      <svg {...iconProps}>
-        <path d="M12 4v16M8 20h8M5 7h14M5 7l-2.5 6a2.5 2.5 0 0 0 5 0L5 7ZM19 7l-2.5 6a2.5 2.5 0 0 0 5 0L19 7Z" />
+      <svg viewBox="0 0 24 24" className={iconClass} fill="currentColor" aria-hidden>
+        <g transform="rotate(-45 12 10)">
+          <rect x="7" y="2" width="10" height="6" rx="1.2" />
+          <rect x="6" y="1" width="2.5" height="8" rx="0.8" />
+          <rect x="15.5" y="1" width="2.5" height="8" rx="0.8" />
+          <rect x="10.8" y="8" width="2.4" height="11" rx="1.2" />
+        </g>
+        <rect x="2" y="19.5" width="11" height="2.5" rx="1" />
       </svg>
     ),
   },
@@ -97,13 +123,19 @@ const CATEGORIES: CareerCategory[] = [
     name: "Design",
     courses: ["B.Des", "Fashion Design", "Interior Design"],
     href: "/programs/undergraduate",
-    card: "bg-gradient-to-br from-white via-red-50/60 to-orange-100/60 border-red-100 hover:border-red-300",
-    iconBox: "bg-orange-100/80 text-orange-600",
-    arrow: "text-orange-600",
+    card: "border-[#FBE2EA] bg-gradient-to-br from-[#FFF9FB] to-[#FDEBF1] hover:border-[#F5BED0]",
+    accent: "text-[#E11D63]",
+    dot: "bg-[#E11D63]",
     icon: (
-      <svg {...iconProps}>
-        <path d="m14.5 4.5 5 5L9 20H4v-5L14.5 4.5Z" />
-        <path d="m12.5 6.5 5 5" />
+      <svg viewBox="0 0 24 24" className={iconClass} aria-hidden>
+        <path
+          fill="currentColor"
+          d="M12 2a10 10 0 0 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.3A4.7 4.7 0 0 0 22 10.7C22 5.9 17.5 2 12 2Z"
+        />
+        <circle cx="6.8" cy="11.5" r="1.5" fill="#fff" />
+        <circle cx="9.2" cy="7" r="1.5" fill="#fff" />
+        <circle cx="14.6" cy="6.8" r="1.5" fill="#fff" />
+        <circle cx="17.8" cy="10.6" r="1.5" fill="#fff" />
       </svg>
     ),
   },
@@ -111,13 +143,15 @@ const CATEGORIES: CareerCategory[] = [
     name: "IT & Computer",
     courses: ["BCA", "MCA", "Data Science"],
     href: "/programs/undergraduate",
-    card: "bg-gradient-to-br from-white via-blue-50/60 to-indigo-100/70 border-blue-100 hover:border-blue-300",
-    iconBox: "bg-blue-100/80 text-blue-800",
-    arrow: "text-blue-800",
+    card: "border-[#E0E8FB] bg-gradient-to-br from-[#F8FAFF] to-[#E8EFFD] hover:border-[#BCCDF5]",
+    accent: "text-[#1D4ED8]",
+    dot: "bg-[#1D4ED8]",
     icon: (
-      <svg {...iconProps}>
-        <rect x="3" y="4.5" width="18" height="12" rx="2" />
-        <path d="M8 20h8M12 16.5V20" />
+      <svg viewBox="0 0 24 24" className={iconClass} fill="currentColor" aria-hidden>
+        <rect x="2" y="3" width="20" height="14" rx="2" />
+        <rect x="4" y="5" width="16" height="9.5" rx="0.8" fill="#fff" opacity="0.3" />
+        <rect x="10.5" y="17" width="3" height="3" />
+        <rect x="7" y="19.5" width="10" height="2" rx="1" />
       </svg>
     ),
   },
@@ -125,15 +159,21 @@ const CATEGORIES: CareerCategory[] = [
     name: "Arts & Humanities",
     courses: ["BA", "MA", "Psychology"],
     href: "/programs/undergraduate",
-    card: "bg-gradient-to-br from-white via-amber-50/60 to-amber-100/70 border-amber-100 hover:border-amber-300",
-    iconBox: "bg-amber-100/80 text-amber-600",
-    arrow: "text-amber-600",
+    card: "border-[#FCE7DB] bg-gradient-to-br from-[#FFFAF6] to-[#FEEFE5] hover:border-[#F8C9AE]",
+    accent: "text-[#EF4444]",
+    dot: "bg-[#F97316]",
     icon: (
-      <svg {...iconProps}>
-        <path d="M12 4a8 8 0 1 0 0 16c1.1 0 1.5-.8 1.5-1.5 0-1.2-1-1.5-1-2.5s.8-1.5 2-1.5H17a3 3 0 0 0 3-3C20 7.4 16.4 4 12 4Z" />
-        <circle cx="8" cy="11" r="1" fill="currentColor" stroke="none" />
-        <circle cx="11" cy="7.8" r="1" fill="currentColor" stroke="none" />
-        <circle cx="15" cy="8.5" r="1" fill="currentColor" stroke="none" />
+      <svg viewBox="0 0 24 24" className={iconClass} aria-hidden>
+        <path
+          fill="currentColor"
+          d="M1.5 4.5A1.5 1.5 0 0 1 3 3h5a3.5 3.5 0 0 1 3.3 2.3V21a3 3 0 0 0-2.6-1.5H3a1.5 1.5 0 0 1-1.5-1.5v-13.5ZM22.5 4.5A1.5 1.5 0 0 0 21 3h-5a3.5 3.5 0 0 0-3.3 2.3V21a3 3 0 0 1 2.6-1.5H21a1.5 1.5 0 0 0 1.5-1.5v-13.5Z"
+        />
+        <path
+          d="M4.5 7.5h4M4.5 10.5h4M4.5 13.5h4M15.5 7.5h4M15.5 10.5h4M15.5 13.5h4"
+          stroke="#fff"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+        />
       </svg>
     ),
   },
@@ -141,13 +181,13 @@ const CATEGORIES: CareerCategory[] = [
 
 export function CoursesSection() {
   return (
-    <section className="bg-white py-10 lg:py-14" aria-labelledby="explore-courses-heading">
+    <section className="py-10 lg:py-3" aria-labelledby="explore-courses-heading">
       <div className="era-shell">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600">
-              <span className="h-1.5 w-1.5 rounded-full bg-red-600" aria-hidden />
-              Explore Courses
+            <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#f8035c]">
+              <span className="h-1.5 w-1.5 rounded-full bg-pink-600" aria-hidden />
+              Top Courses
             </p>
             <h2
               id="explore-courses-heading"
@@ -173,29 +213,30 @@ export function CoursesSection() {
               <Link
                 href={category.href}
                 aria-label={`Explore ${category.name} courses: ${category.courses.join(", ")}`}
-                className={`group flex h-full min-h-[11.5rem] flex-col rounded-2xl border p-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(23,19,74,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-era-primary focus-visible:ring-offset-2 ${category.card}`}
+                className={`group relative flex h-full flex-col rounded-xl border px-3.5 pb-4 pt-[18px] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(23,19,74,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-era-primary focus-visible:ring-offset-2 ${category.card}`}
               >
-                <span
-                  className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${category.iconBox}`}
-                >
-                  {category.icon}
-                </span>
-                <h3 className="mt-3 text-[12px] font-bold leading-snug text-era-dark">{category.name}</h3>
-                <ul className="mt-2.5 mb-3 space-y-1.5">
+                <span className={category.accent}>{category.icon}</span>
+                <h3 className="mt-3.5 text-[12.5px] font-bold leading-snug text-era-dark">
+                  {category.name}
+                </h3>
+                <ul className="mt-2 space-y-[7px]">
                   {category.courses.map((course) => (
-                    <li key={course} className="flex items-center gap-2 text-[12px] text-slate-600">
-                      <span className="h-1 w-1 shrink-0 rounded-full bg-slate-400" aria-hidden />
-                      <span className="truncate">{course}</span>
+                    <li
+                      key={course}
+                      className="flex items-center gap-[7px] text-[11.5px] leading-tight text-slate-700 last:pr-4"
+                    >
+                      <span className={`h-[5px] w-[5px] shrink-0 rounded-full ${category.dot}`} aria-hidden />
+                      <span className="whitespace-nowrap">{course}</span>
                     </li>
                   ))}
                 </ul>
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
-                  className={`mt-auto h-4 w-4 self-end text-gray-600 transition-transform group-hover:translate-x-0.5`}
+                  className={`absolute bottom-[15px] right-2.5 h-4 w-4 transition-transform group-hover:translate-x-0.5 ${category.accent}`}
                   aria-hidden
                 >
-                  <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </Link>
             </li>

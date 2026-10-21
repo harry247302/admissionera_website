@@ -4,6 +4,7 @@ import Link from "next/link";
 const AI_FINDER_HREF = "/tools/course-finder";
 const ROBOT_SRC = "/assets/admissionera/admissionera_ai_robot.webp";
 const AVATAR_SRC = "/assets/admissionera/student_avatar.webp";
+const BANNER_SRC = "/assets/admissionera/ask-admissionera-ai.png";
 
 const aiFeatures = [
   "Personalized Suggestions",
@@ -212,55 +213,26 @@ function AIFeatures() {
 
 export function AdmissionEraAISection() {
   return (
-    <section
-      className="bg-white pb-12 sm:pb-14"
-      aria-labelledby="ai-section-heading"
-    >
-      <div className="mx-auto w-[min(1200px,calc(100%-2rem))]">
-        <div className="relative overflow-hidden rounded-[18px] border border-[#E9DDF7]/70 bg-[linear-gradient(110deg,#FBF7FF_0%,#F7F0FF_55%,#FDEEF7_100%)] px-5 py-8 min-[601px]:px-8 lg:min-h-[280px] lg:px-10 lg:py-7 xl:px-12">
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -left-16 -top-20 h-56 w-56 rounded-full bg-[#EFE2FF]/70 blur-3xl"
+    <div>
+       <div className="">
+        <h2 id="ai-section-heading" className="sr-only">
+          Ask AdmissionEra AI
+        </h2>
+        <Link
+          href={AI_FINDER_HREF}
+          aria-label="Ask AdmissionEra AI — find my options with AI"
+          className="group block "
+        >
+          <Image
+            src={BANNER_SRC}
+            alt="Not sure what to choose? Ask AdmissionEra AI for personalized college and course recommendations based on your interest, marks, location and budget."
+            width={1024}
+            height={205}
+            sizes="(max-width: 1280px) 100vw, 1200px"
+            className="h-auto w-full"
           />
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-72 rounded-full bg-white/60 blur-3xl"
-          />
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -right-10 top-1/4 h-64 w-64 rounded-full bg-[#FBD8EC]/60 blur-3xl"
-          />
-          <svg
-            aria-hidden
-            viewBox="0 0 600 200"
-            className="pointer-events-none absolute bottom-0 left-0 h-32 w-[60%] text-[#D8C2F5] opacity-50"
-            fill="none"
-          >
-            <path
-              d="M0 170C120 120 220 190 340 140S520 60 600 90"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            />
-          </svg>
-          <SparklesIcon className="pointer-events-none absolute right-[34%] top-6 hidden h-4 w-4 text-[#D98BD0] lg:block" />
-          <div className="relative grid items-center gap-8 min-[601px]:grid-cols-2 min-[601px]:gap-x-6 lg:grid-cols-[37fr_27fr_36fr] lg:gap-x-5">
-            <div className="min-[601px]:col-span-2 lg:col-span-1">
-              <AIIntro />
-            </div>
-
-            <AIConversation />
-
-            <div className="relative flex flex-col items-center gap-4 min-[601px]:block min-[601px]:h-[250px] xl:h-[260px]">
-              <div className="min-[601px]:absolute min-[601px]:left-0 min-[601px]:top-1/2 min-[601px]:-translate-y-1/2">
-                <AIRobotVisual />
-              </div>
-              <div className="flex w-full justify-center min-[601px]:absolute min-[601px]:right-0 min-[601px]:top-1/2 min-[601px]:w-auto min-[601px]:-translate-y-1/2">
-                <AIFeatures />
-              </div>
-            </div>
-          </div>
-        </div>
+        </Link>
       </div>
-    </section>
+    </div>
   );
 }

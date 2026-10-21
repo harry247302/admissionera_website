@@ -183,7 +183,7 @@ function TestimonialCard({ testimonial, active }: { testimonial: Testimonial; ac
     <article
       className={`relative flex h-full flex-col gap-4 overflow-hidden rounded-2xl border bg-white p-4 transition duration-500 min-[480px]:flex-row min-[480px]:items-center min-[480px]:gap-5 min-[480px]:p-5 ${
         active
-          ? "border-[#E8ECF4] shadow-[0_14px_36px_rgba(16,27,50,0.08)]"
+          ? "border-[#E8ECF4]"
           : "scale-[0.94] border-[#EEF1F6] opacity-55 shadow-none"
       }`}
     >

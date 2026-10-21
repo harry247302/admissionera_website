@@ -14,6 +14,7 @@ export type CollegeCardData = {
   location: string;
   rating: number | null;
   image: string;
+  logo?: string;
   courses: string[];
   fees: string;
   href: string;
@@ -86,22 +87,13 @@ function mergeColleges(apiColleges: CollegeCardData[]) {
   return [...apiColleges, ...fallback].slice(0, MAX_CARDS);
 }
 
-function HeartIcon({ filled }: { filled: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={`h-4 w-4 transition-colors duration-200 ${
-        filled ? "fill-current" : "fill-transparent group-hover/fav:fill-current"
-      }`}
-      aria-hidden
-    >
-      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-    </svg>
-  );
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter((word) => /^[A-Za-z]/.test(word) && word.toLowerCase() !== "of")
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join("");
 }
 
 function MapPinIcon() {
@@ -122,15 +114,7 @@ function MapPinIcon() {
   );
 }
 
-function CollegeCard({
-  college,
-  favorite,
-  onToggleFavorite,
-}: {
-  college: CollegeCardData;
-  favorite: boolean;
-  onToggleFavorite: () => void;
-}) {
+function CollegeCard({ college }: { college: CollegeCardData }) {
   return (
     <article className="group relative flex h-full flex-col rounded-[14px] border border-[#EAECF0] bg-white p-[5px] shadow-[0_1px_3px_rgba(16,24,40,0.05)] transition duration-200 ease-out hover:-translate-y-[3px] hover:border-[#D0D5DD] hover:shadow-[0_10px_24px_rgba(16,24,40,0.08)] sm:p-1.5">
       <div className="relative">
@@ -144,19 +128,24 @@ function CollegeCard({
           />
         </div>
 
-        <button
-          type="button"
-          onClick={onToggleFavorite}
-          aria-pressed={favorite}
-          aria-label={
-            favorite
-              ? `Remove ${college.name} from favorites`
-              : `Add ${college.name} to favorites`
-          }
-          className="group/fav absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-[10px] bg-white text-[#DB2777] shadow-[0_2px_8px_rgba(16,24,40,0.12)] transition duration-200 hover:scale-[1.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B21B6] sm:right-2.5 sm:top-2.5 sm:h-[34px] sm:w-[34px]"
-        >
-          <HeartIcon filled={favorite} />
-        </button>
+        <span className="absolute right-2 top-2 inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-[10px] bg-white shadow-[0_2px_8px_rgba(16,24,40,0.15)] sm:right-2.5 sm:top-2.5 sm:h-11 sm:w-11">
+          {college.logo ? (
+            <Image
+              src={college.logo}
+              alt={`${college.name} logo`}
+              width={44}
+              height={44}
+              className="h-full w-full object-contain p-0.5"
+            />
+          ) : (
+            <span
+              className="text-[12px] font-bold text-[#5B21B6] sm:text-[13px]"
+              aria-hidden
+            >
+              {initials(college.name)}
+            </span>
+          )}
+        </span>
 
         {college.rating != null ? (
           <span className="absolute -bottom-3 right-2.5 inline-flex items-center gap-1 rounded-full bg-white px-2 py-[3px] text-[11px] font-semibold text-[#16A34A] shadow-[0_2px_8px_rgba(16,24,40,0.12)] sm:text-[12px]">
@@ -199,14 +188,14 @@ function CollegeCard({
         <div className="mt-auto flex gap-1.5 pt-3 sm:gap-2">
           <Link
             href={college.href}
-            className="inline-flex h-9 flex-1 items-center justify-center whitespace-nowrap rounded-[7px] bg-[#5B21B6] px-1 text-[10px] font-semibold text-white transition duration-150 hover:bg-[#4C1D95] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B21B6] sm:h-[38px] sm:text-[11px]"
+            className="inline-flex h-9 flex-1 items-center justify-center whitespace-nowrap rounded-[7px] bg-[#f8035c] px-1 text-[10px] font-semibold text-white transition duration-150 hover:bg-[#f8035c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f8035c] sm:h-[38px] sm:text-[11px]"
           >
             View College
           </Link>
           <Link
             href={`/compare?university=${encodeURIComponent(college.name)}`}
             aria-label={`Compare ${college.name}`}
-            className="inline-flex h-9 flex-1 items-center justify-center whitespace-nowrap rounded-[7px] border border-[#E4E7EC] bg-white px-1 text-[10px] font-semibold text-[#344054] transition duration-150 hover:border-[#5B21B6] hover:bg-[#F9FAFB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B21B6] sm:h-[38px] sm:text-[11px]"
+            className="inline-flex h-9 flex-1 items-center justify-center whitespace-nowrap rounded-[7px] border border-[#E4E7EC] bg-white px-1 text-[10px] font-semibold text-[#344054] transition duration-150 hover:border-[#f8035c] hover:bg-[#F9FAFB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5B21B6] sm:h-[38px] sm:text-[11px]"
           >
             Compare
           </Link>
@@ -218,8 +207,6 @@ function CollegeCard({
 
 export function TopUniversitiesSection() {
   const [cards, setCards] = useState<CollegeCardData[]>(colleges);
-  const [favorites, setFavorites] = useState<string[]>([]);
-
   useEffect(() => {
     let cancelled = false;
 
@@ -240,6 +227,7 @@ export function TopUniversitiesSection() {
             location: uni.state || fallback?.location || "India",
             rating: uni.ratings ?? fallback?.rating ?? null,
             image: uni.banner || fallback?.image || colleges[index % colleges.length].image,
+            logo: uni.logo || undefined,
             courses: detail?.courses.length ? detail.courses : fallback?.courses ?? [],
             fees: detail?.fees || fallback?.fees || "",
             href: `/universities/${uni.uuid}`,
@@ -257,18 +245,12 @@ export function TopUniversitiesSection() {
     };
   }, []);
 
-  const toggleFavorite = (id: string) => {
-    setFavorites((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
-
   return (
-    <section className="bg-white py-10 sm:py-12 lg:py-14" aria-labelledby="top-colleges-heading">
+    <section className="sm:py-5 lg:py-5" aria-labelledby="top-colleges-heading">
       <div className="mx-auto w-[min(1200px,calc(100%-2rem))]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
           <div className="min-w-0">
-            <p className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#5B21B6]">
+            <p className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#DB2777]">
               <span className="h-1.5 w-1.5 rounded-full bg-[#DB2777]" aria-hidden />
               Top Colleges
             </p>
@@ -294,12 +276,7 @@ export function TopUniversitiesSection() {
 
         <div className="mt-6 grid grid-cols-2 gap-2.5 min-[480px]:gap-3.5 min-[601px]:grid-cols-3 lg:grid-cols-4 lg:gap-4 min-[75rem]:grid-cols-5 min-[75rem]:gap-[18px]">
           {cards.map((college) => (
-            <CollegeCard
-              key={college.id}
-              college={college}
-              favorite={favorites.includes(college.id)}
-              onToggleFavorite={() => toggleFavorite(college.id)}
-            />
+            <CollegeCard key={college.id} college={college} />
           ))}
         </div>
       </div>

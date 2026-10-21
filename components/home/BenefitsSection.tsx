@@ -44,7 +44,7 @@ const STEPS = [
 
 export function BenefitsSection() {
   return (
-    <section className="bg-white py-10 lg:py-14" aria-labelledby="how-it-works-heading">
+    <section className="py-10 lg:py-14" aria-labelledby="how-it-works-heading">
       <div className="era-shell">
         <div className="era-reveal grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start lg:gap-10">
           <div>

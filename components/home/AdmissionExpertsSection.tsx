@@ -7,11 +7,13 @@ import {
   ADMISSION_EXPERTS,
   expertContactHref,
   fetchCounsellors,
+  isCounsellorActive,
+  mapCounsellor,
   type AdmissionExpert,
   type ExpertTone,
 } from "@/lib/admissionExperts";
 
-const VIEW_ALL_HREF = "/about";
+const VIEW_ALL_HREF = "/counsellors";
 
 const TONE_STYLES: Record<ExpertTone, { portrait: string; initials: string }> = {
   pink: { portrait: "from-[#FFE9EE] to-[#FFF6F8]", initials: "bg-[#FFD3DD] text-[#A80E27]" },
@@ -314,7 +316,7 @@ export function AdmissionExpertsSection() {
 
     (async () => {
       try {
-        const counsellors = await fetchCounsellors();
+        const counsellors = (await fetchCounsellors()).filter(isCounsellorActive).map(mapCounsellor);
         if (!cancelled) setExperts(counsellors.length > 0 ? counsellors : ADMISSION_EXPERTS);
       } catch {
         if (!cancelled) setExperts(ADMISSION_EXPERTS);
