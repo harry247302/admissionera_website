@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 import { Navbar } from "@/components/Navbar/Navbar";
 import { SiteFooter } from "@/components/SiteFooter";
 import "./globals.css";
@@ -23,12 +24,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-white font-sans text-navy">
-        <a href="#main" className="skip-link">
-          Skip to content
-        </a>
-        <Navbar />
-        {children}
-        <SiteFooter />
+        <AuthProvider>
+          <a href="#main" className="skip-link">
+            Skip to content
+          </a>
+          <Navbar />
+          {children}
+          <SiteFooter />
+        </AuthProvider>
       </body>
     </html>
   );

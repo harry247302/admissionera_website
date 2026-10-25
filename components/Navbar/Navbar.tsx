@@ -13,9 +13,11 @@ import {
   MobileSearchPanel,
   SearchOverlay,
 } from "@/components/Search/SearchOverlay";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export function Navbar() {
   const pathname = usePathname();
+  const { user, loading } = useAuth();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -106,18 +108,28 @@ export function Navbar() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-2.5">
-          <Link
-            href="/signin"
-            className="hidden h-9 items-center rounded-lg border border-[#35066F] px-3.5 text-[13px] font-semibold text-[#35066F] transition hover:bg-[#F1ECFF] sm:inline-flex"
-          >
-            Login
-          </Link>
-          <Link
-            href="/signin"
-            className="hidden h-9 items-center rounded-lg bg-[#35066F] px-3.5 text-[13px] font-semibold text-white transition hover:bg-[#4A0A96] sm:inline-flex"
-          >
-            Register
-          </Link>
+          {loading ? (
+            <span className="hidden h-9 w-[88px] rounded-lg bg-[#F1ECFF] sm:inline-flex" aria-hidden />
+          ) : user ? (
+            <span className="hidden max-w-[180px] truncate rounded-lg bg-[#F1ECFF] px-3.5 py-2 text-[13px] font-semibold text-[#35066F] sm:inline-flex">
+              {user.name || user.email}
+            </span>
+          ) : (
+            <>
+              <Link
+                href="/signin"
+                className="hidden h-9 items-center rounded-lg border border-[#35066F] px-3.5 text-[13px] font-semibold text-[#35066F] transition hover:bg-[#F1ECFF] sm:inline-flex"
+              >
+                Login
+              </Link>
+              <Link
+                href="/signin"
+                className="hidden h-9 items-center rounded-lg bg-[#35066F] px-3.5 text-[13px] font-semibold text-white transition hover:bg-[#4A0A96] sm:inline-flex"
+              >
+                Register
+              </Link>
+            </>
+          )}
 
           <div className="hidden lg:block">
             <SearchOverlay />

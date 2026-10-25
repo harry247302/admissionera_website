@@ -62,6 +62,7 @@ function SideWaves2({ src }: { src: string }) {
   );
 }
 export default function Home() {
+  console.log("Home");
   return (
     <main id="main" className="flex-1 bg-white">
       <HeroCarousel />

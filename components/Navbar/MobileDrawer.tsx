@@ -7,6 +7,7 @@ import { ChevronDownIcon, CloseIcon, SparkleIcon, UserIcon } from "@/components/
 import { DRAWER_SECTIONS } from "@/lib/navigation";
 import { NAV_ICONS, PRIMARY_NAV } from "@/components/Navbar/navConfig";
 import { SearchOverlay } from "@/components/Search/SearchOverlay";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 type MobileDrawerProps = {
   open: boolean;
@@ -15,6 +16,7 @@ type MobileDrawerProps = {
 
 export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
   const titleId = useId();
   const [openSection, setOpenSection] = useState<string | null>(null);
   const visibleSection = open ? openSection : null;
@@ -179,10 +181,17 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
               </span>
             </span>
           </Link>
-          <Link href="/signin" className="nav-signin sm:flex-1" onClick={onClose}>
-            <UserIcon className="h-4 w-4" />
-            Sign In
-          </Link>
+          {user ? (
+            <p className="nav-signin sm:flex-1">
+              <UserIcon className="h-4 w-4" />
+              {user.name || user.email}
+            </p>
+          ) : (
+            <Link href="/signin" className="nav-signin sm:flex-1" onClick={onClose}>
+              <UserIcon className="h-4 w-4" />
+              Sign In
+            </Link>
+          )}
         </div>
       </aside>
     </div>

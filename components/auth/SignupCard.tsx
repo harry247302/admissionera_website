@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { loginWithEmail, registerAccount } from "@/lib/auth";
 
 const COURSES = ["BCA", "BBA", "B.Com", "B.Tech", "BA", "MBA", "MCA", "M.Com", "MA", "M.Tech"];
 
@@ -119,7 +122,7 @@ const ASSURANCES: { title: string; icon: ReactNode }[] = [
 ];
 
 const submitClass =
-  "inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#2F5BEA] text-[14.5px] font-semibold text-white shadow-[0_10px_22px_rgba(47,91,234,0.28)] transition hover:bg-[#2449C9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F5BEA]";
+  "inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#2F5BEA] text-[14.5px] font-semibold text-white shadow-[0_10px_22px_rgba(47,91,234,0.28)] transition hover:bg-[#2449C9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F5BEA] disabled:cursor-not-allowed disabled:opacity-70";
 
 function ArrowIcon() {
   return (
@@ -137,6 +140,8 @@ function errorProps(id: string, error?: string) {
 }
 
 export function SignupCard() {
+  const router = useRouter();
+  const { refreshUser } = useAuth();
   const [mode, setMode] = useState<"signup" | "login">("signup");
   const [form, setForm] = useState({
     name: "",
@@ -152,6 +157,8 @@ export function SignupCard() {
   const [errors, setErrors] = useState<Errors>({});
   const [couponNote, setCouponNote] = useState("");
   const [status, setStatus] = useState("");
+  const [statusKind, setStatusKind] = useState<"info" | "error">("info");
+  const [submitting, setSubmitting] = useState(false);
 
   const update = (key: keyof typeof form) => (value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -160,6 +167,7 @@ export function SignupCard() {
     setMode(next);
     setErrors({});
     setStatus("");
+    setStatusKind("info");
   };
 
   const applyCoupon = () => {
@@ -167,7 +175,7 @@ export function SignupCard() {
     setCouponNote(code ? `Coupon "${code.toUpperCase()}" will be checked by your counsellor.` : "Enter a coupon code first.");
   };
 
-  const onSubmit = (event: FormEvent) => {
+  const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const next: Errors = {};
     if (!EMAIL_PATTERN.test(form.email.trim())) next.email = "Enter a valid email address.";
@@ -179,15 +187,41 @@ export function SignupCard() {
       if (!form.course) next.course = "Select a course.";
       if (!form.dob) next.dob = "Enter your date of birth.";
       if (!form.state) next.state = "Select your state.";
+      if (form.password.length < 6) next.password = "Password must be at least 6 characters.";
     }
     setErrors(next);
-    setStatus(
-      Object.keys(next).length
-        ? ""
-        : mode === "login"
-          ? "Sign in isn't connected yet. Your details were not sent anywhere."
-          : "Sign up isn't connected yet. Your details were not sent anywhere.",
-    );
+    if (Object.keys(next).length) {
+      setStatus("");
+      return;
+    }
+
+    setSubmitting(true);
+    setStatus("");
+    try {
+      const result =
+        mode === "login"
+          ? await loginWithEmail(form.email, form.password)
+          : await registerAccount({
+              name: form.name,
+              email: form.email,
+              phone_number: form.phone,
+              course: form.course,
+              dob: form.dob,
+              state: form.state,
+              password: form.password,
+              role: "user",
+            });
+      setStatusKind("info");
+      setStatus(result.message || (mode === "login" ? "Login successful" : "Registration successful"));
+      await refreshUser();
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      setStatusKind("error");
+      setStatus(error instanceof Error ? error.message : mode === "login" ? "Unable to sign in." : "Unable to create account.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -234,7 +268,7 @@ export function SignupCard() {
                 </div>
               </Field>
 
-              <Field id="coupon" label="Apply Coupon" hint="(Optional)">
+              {/* <Field id="coupon" label="Apply Coupon" hint="(Optional)">
                 <div className={`${BOX} pr-1.5`}>
                   <Icon>
                     <path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z" />
@@ -259,7 +293,7 @@ export function SignupCard() {
                   </button>
                 </div>
                 {couponNote ? <p className="mt-1.5 text-[12px] text-[#475467]">{couponNote}</p> : null}
-              </Field>
+              </Field> */}
 
               <Field
                 id="phone"
@@ -367,6 +401,13 @@ export function SignupCard() {
               </Field>
             </div>
 
+            <PasswordField
+              value={form.password}
+              onChange={update("password")}
+              error={errors.password}
+              autoComplete="new-password"
+            />
+
             <fieldset className="rounded-2xl border border-[#BFD0FB] bg-[#F5F8FF] px-4 py-4">
               <legend className="sr-only">AdmissionEra Assured</legend>
               <div className="flex items-center justify-between gap-3">
@@ -416,34 +457,35 @@ export function SignupCard() {
         ) : (
           <>
             <EmailField value={form.email} onChange={update("email")} error={errors.email} />
-            <Field id="password" label="Password" error={errors.password}>
-              <div className={`${BOX} ${errors.password ? BOX_ERROR : ""}`}>
-                <Icon>
-                  <rect x="4.5" y="10.5" width="15" height="10.5" rx="2" />
-                  <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
-                </Icon>
-                <input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={form.password}
-                  onChange={(event) => update("password")(event.target.value)}
-                  placeholder="Enter your password"
-                  className={INPUT}
-                  {...errorProps("password", errors.password)}
-                />
-              </div>
-            </Field>
+            <PasswordField
+              value={form.password}
+              onChange={update("password")}
+              error={errors.password}
+              autoComplete="current-password"
+            />
           </>
         )}
 
-        <button type="submit" className={submitClass}>
-          {mode === "signup" ? "Create Account" : "Sign In"}
+        <button type="submit" className={submitClass} disabled={submitting}>
+          {mode === "signup"
+            ? submitting
+              ? "Creating account..."
+              : "Create Account"
+            : submitting
+              ? "Signing in..."
+              : "Sign In"}
           <ArrowIcon />
         </button>
 
         {status ? (
-          <p role="status" className="rounded-xl bg-[#EEF2FF] px-3 py-2 text-center text-[12.5px] text-[#1D3FAF]">
+          <p
+            role="status"
+            className={`rounded-xl px-3 py-2 text-center text-[12.5px] ${
+              statusKind === "error"
+                ? "bg-[#FEF3F2] text-[#D92D20]"
+                : "bg-[#EEF2FF] text-[#1D3FAF]"
+            }`}
+          >
             {status}
           </p>
         ) : null}
@@ -460,6 +502,39 @@ export function SignupCard() {
         </p>
       </form>
     </div>
+  );
+}
+
+function PasswordField({
+  value,
+  onChange,
+  error,
+  autoComplete,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  autoComplete: string;
+}) {
+  return (
+    <Field id="password" label="Password" error={error}>
+      <div className={`${BOX} ${error ? BOX_ERROR : ""}`}>
+        <Icon>
+          <rect x="4.5" y="10.5" width="15" height="10.5" rx="2" />
+          <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+        </Icon>
+        <input
+          id="password"
+          type="password"
+          autoComplete={autoComplete}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="Enter your password"
+          className={INPUT}
+          {...errorProps("password", error)}
+        />
+      </div>
+    </Field>
   );
 }
 
