@@ -1,0 +1,34 @@
+{
+  "success": true,
+  "message": "Blogs fetched successfully",
+  "data": [
+    {
+      "uuid": "ec27d951-6b2f-4404-9ef9-b6b7b6ee3238",
+      "title": "adfasdf asdf asdf af asd fa sd fa sd f",
+      "slug": "adfa",
+      "excerpt": "https://imgs.search.brave.com/WhsmBlsTCnbQw4br3Um8z2hlJxqkr-PUE6_c4F1fMR0/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly9tZWRp/YS5nZXR0eWltYWdl/cy5jb20vaWQvMTI1/MTE1NjM3NS9waG90/by9tYW4tc3RhbmRz/LWluLWZyb250LW9m/LWdsb3dpbmctcG9y/dGFsLWFuZC1pcy1h/Ym91dC10by1lbnRl/ci10aGUtdW5rbm93/bi5qcGc_cz02MTJ4/NjEyJnc9Z2kmaz0y/MCZjPXdGVWhqYndR/XzA3cjJXSVpmVUh0/TDhaTlh1d0g0UkR3/TDFLRy04MmVtRDA9https://imgs.search.brave.com/WhsmBlsTCnbQw4br3Um8z2hlJxqkr-PUE6_c4F1fMR0/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly9tZWRp/YS5nZXR0eWltYWdl/cy5jb20vaWQvMTI1/MTE1NjM3NS9waG90/by9tYW4tc3RhbmRz/LWluLWZyb250LW9m/LWdsb3dpbmctcG9y/dGFsLWFuZC1pcy1h/Ym91dC10by1lbnRl/ci10aGUtdW5rbm93/bi5qcGc_cz02MTJ4/NjEyJnc9Z2kmaz0y/MCZjPXdGVWhqYndR/XzA3cjJXSVpmVUh0/TDhaTlh1d0g0UkR3/TDFLRy04MmVtRDA9https://imgs.search.brave.com/WhsmBlsTCnbQw4br3Um8z2hlJxqkr-PUE6_c4F1fMR0/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly9tZWRp/YS5nZXR0eWltYWdl/cy5jb20vaWQvMTI1/MTE1NjM3NS9waG90/by9tYW4tc3RhbmRz/LWluLWZyb250LW9m/LWdsb3dpbmctcG9y/dGFsLWFuZC1pcy1h/Ym91dC10by1lbnRl/ci10aGUtdW5rbm93/bi5qcGc_cz02MTJ4/NjEyJnc9Z2kmaz0y/MCZjPXdGVWhqYndR/XzA3cjJXSVpmVUh0/TDhaTlh1d0g0UkR3/TDFLRy04MmVtRDA9https://imgs.search.brave.com/WhsmBlsTCnbQw4br3Um8z2hlJxqkr-PUE6_c4F1fMR0/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly9tZWRp/YS5nZXR0eWltYWdl/cy5jb20vaWQvMTI1/MTE1NjM3NS9waG90/by9tYW4tc3RhbmRz/LWluLWZyb250LW9m/LWdsb3dpbmctcG9y/dGFsLWFuZC1pcy1h/Ym91dC10by1lbnRl/ci10aGUtdW5rbm93/bi5qcGc_cz02MTJ4/NjEyJnc9Z2kmaz0y/MCZjPXdGVWhqYndR/XzA3cjJXSVpmVUh0/TDhaTlh1d0g0UkR3/TDFLRy04MmVtRDA9https://imgs.search.brave.com/WhsmBlsTCnbQw4br3Um8z2hlJxqkr-PUE6_c4F1fMR0/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly9tZWRp/YS5nZXR0eWltYWdl/cy5jb20vaWQvMTI1/MTE1NjM3NS9waG90/by9tYW4tc3RhbmRz/LWluLWZyb250LW9m/LWdsb3dpbmctcG9y/dGFsLWFuZC1pcy1h/Ym91dC10by1lbnRl/ci10aGUtdW5rbm93/bi5qcGc_cz02MTJ4/NjEyJnc9Z2kmaz0y/MCZjPXdGVWhqYndR/XzA3cjJXSVpmVUh0/TDhaTlh1d0g0UkR3/TDFLRy04MmVtRDA9",
+      "featured_image": "https://imgs.search.brave.com/WhsmBlsTCnbQw4br3Um8z2hlJxqkr-PUE6_c4F1fMR0/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly9tZWRp/YS5nZXR0eWltYWdl/cy5jb20vaWQvMTI1/MTE1NjM3NS9waG90/by9tYW4tc3RhbmRz/LWluLWZyb250LW9m/LWdsb3dpbmctcG9y/dGFsLWFuZC1pcy1h/Ym91dC10by1lbnRl/ci10aGUtdW5rbm93/bi5qcGc_cz02MTJ4/NjEyJnc9Z2kmaz0y/MCZjPXdGVWhqYndR/XzA3cjJXSVpmVUh0/TDhaTlh1d0g0UkR3/TDFLRy04MmVtRDA9",
+      "author_id": "e31514e9-dcdb-48ff-9dd3-ddec6994617e",
+      "category": "Universities",
+      "tags": [
+        "demo",
+        "demod",
+        "demoo",
+        "dewe"
+      ],
+      "status": "archived",
+      "meta_title": "a",
+      "meta_description": null,
+      "meta_keywords": [],
+      "published_at": "2026-10-24T04:34:00.000Z",
+      "created_at": "2026-10-29T10:05:30.425Z",
+      "updated_at": "2026-10-29T10:05:49.162Z"
+    }
+  ],
+  "pagination": {
+    "total": 1,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 1
+  }
+}

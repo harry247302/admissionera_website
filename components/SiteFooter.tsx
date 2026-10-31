@@ -11,6 +11,7 @@ const QUICK_LINKS: FooterLink[] = [
   { label: "Courses", href: "/programs" },
   { label: "Exams", href: "/search?q=Exams" },
   { label: "Scholarships", href: "/search?q=Scholarships" },
+  { label: "Blogs", href: "/blogs" },
 ];
 
 const STUDENT_LINKS: FooterLink[] = [
@@ -145,7 +146,7 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-[#F1ECFF]">
         <p className="era-shell py-4 text-xs text-[#667085]">
-          © {new Date().getFullYear()} AdmissionEra. All rights reserved.
+          &copy; {new Date().getFullYear()} AdmissionEra. All rights reserved.
         </p>
       </div>
     </footer>

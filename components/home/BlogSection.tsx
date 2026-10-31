@@ -8,21 +8,21 @@ const POSTS = [
     title: "Top Career Options After 12th",
     date: "Aug 25, 2025",
     image: "/hero/slide-1.png",
-    href: "/about",
+    href: "/blogs",
   },
   {
     category: "College Insights",
     title: "How to Choose the Right College for Your Future",
     date: "Aug 20, 2025",
     image: "/hero/slide-2.png",
-    href: "/about",
+    href: "/blogs",
   },
   {
     category: "Admission Tips",
     title: "Step-by-Step Guide to the Admission Process",
     date: "Aug 18, 2025",
     image: "/hero/slide-3.png",
-    href: "/about",
+    href: "/blogs",
   },
 ];
 
@@ -38,7 +38,7 @@ export function BlogSection() {
               Get the latest news, tips and guidance to make informed decisions about your education.
             </SectionLead>
           </div>
-          <Link href="/about" className="era-link shrink-0">
+          <Link href="/blogs" className="era-link shrink-0">
             View All Posts <span aria-hidden>→</span>
           </Link>
         </div>

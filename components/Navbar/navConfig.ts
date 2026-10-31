@@ -23,5 +23,6 @@ export const PRIMARY_NAV: NavItem[] = [
   { label: "Admission", href: "/programs" },
   { label: "Scholarships", href: "/search?q=Scholarships" },
   { label: "Guidance", href: "/tools" },
+  { label: "Blogs", href: "/blogs" },
   { label: "Resources", href: "/about" },
 ];

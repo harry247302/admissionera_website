@@ -7,7 +7,22 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "backend.admissionera.com",
-        pathname: "/uploads/**",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "imgs.search.brave.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "media.gettyimages.com",
+        pathname: "/**",
       },
     ],
   },
