@@ -1,3 +1,24 @@
+export interface BlogContentParagraph {
+  id: string;
+  title?: string | null;
+  content: string;
+  sort_order: number;
+}
+
+export interface BlogContentTableRow {
+  id: string;
+  label: string;
+  content: Record<string, unknown>;
+  sort_order: number;
+}
+
+export interface BlogContentTable {
+  id: string;
+  title?: string | null;
+  sort_order: number;
+  rows: BlogContentTableRow[];
+}
+
 export interface Blog {
   uuid: string;
   title: string;
@@ -16,6 +37,8 @@ export interface Blog {
   published_at?: string | null;
   created_at: string;
   updated_at: string;
+  contentParagraphs: BlogContentParagraph[];
+  contentTables: BlogContentTable[];
 }
 
 export interface BlogPagination {
@@ -42,10 +65,14 @@ export interface FetchBlogsParams {
   slug?: string;
 }
 
-const DEFAULT_API_URL = "https://backend.admissionera.com/api/blogs/get";
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
+  "https://backend.admissionera.com";
+const DEFAULT_API_URL = `${API_BASE}/api/blogs/get`;
 export const BLOGS_API_URL =
   process.env.NEXT_PUBLIC_BLOGS_API_URL || DEFAULT_API_URL;
-const MEDIA_BASE_URL = "https://backend.admissionera.com";
+export const BLOG_BY_ID_API_URL = `${API_BASE}/api/blogs/get-by-id`;
+const MEDIA_BASE_URL = API_BASE;
 
 /**
  * Resolves featured image URL properly.
@@ -84,6 +111,13 @@ export function formatBlogDate(dateStr?: string | null): string {
 /**
  * Calculates estimated reading time for article content.
  */
+export function blogBodyText(blog: Pick<Blog, "excerpt" | "content" | "contentParagraphs">): string {
+  const paragraphText = (blog.contentParagraphs || [])
+    .map((paragraph) => `${paragraph.title || ""} ${paragraph.content}`)
+    .join(" ");
+  return [blog.excerpt, blog.content, paragraphText].filter(Boolean).join(" ");
+}
+
 export function calculateReadingTime(text?: string | null): string {
   if (!text) return "3 min read";
   const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
@@ -112,6 +146,80 @@ export function sanitizeExcerpt(text?: string | null, maxLength = 150): string {
   }
   if (clean.length <= maxLength) return clean;
   return `${clean.slice(0, maxLength).trim()}...`;
+}
+
+function parseJsonObject(value: unknown): Record<string, unknown> {
+  if (!value) return {};
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : {};
+    } catch {
+      return {};
+    }
+  }
+  if (typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+function normalizeParagraphs(raw: unknown): BlogContentParagraph[] {
+  if (!Array.isArray(raw)) return [];
+  const paragraphs: BlogContentParagraph[] = [];
+
+  raw.forEach((item, index) => {
+    if (!item || typeof item !== "object") return;
+    const row = item as Record<string, unknown>;
+    const content = String(row.content || "").trim();
+    if (!content) return;
+    paragraphs.push({
+      id: String(row.id || row.uuid || `paragraph-${index}`),
+      title: row.title ? String(row.title) : null,
+      content,
+      sort_order: Number(row.sort_order ?? index) || 0,
+    });
+  });
+
+  return paragraphs.sort((a, b) => a.sort_order - b.sort_order);
+}
+
+function normalizeTables(raw: unknown): BlogContentTable[] {
+  if (!Array.isArray(raw)) return [];
+  const tables: BlogContentTable[] = [];
+
+  raw.forEach((item, index) => {
+    if (!item || typeof item !== "object") return;
+    const table = item as Record<string, unknown>;
+    const rowsRaw = Array.isArray(table.rows) ? table.rows : [];
+    const rows: BlogContentTableRow[] = [];
+
+    rowsRaw.forEach((rowItem, rowIndex) => {
+      if (!rowItem || typeof rowItem !== "object") return;
+      const row = rowItem as Record<string, unknown>;
+      rows.push({
+        id: String(row.id || row.uuid || `row-${index}-${rowIndex}`),
+        label: String(row.label || ""),
+        content: parseJsonObject(row.content),
+        sort_order: Number(row.sort_order ?? rowIndex) || 0,
+      });
+    });
+
+    rows.sort((a, b) => a.sort_order - b.sort_order);
+
+    if (!rows.length && !String(table.title || "").trim()) return;
+
+    tables.push({
+      id: String(table.id || table.uuid || `table-${index}`),
+      title: table.title ? String(table.title) : null,
+      sort_order: Number(table.sort_order ?? index) || 0,
+      rows,
+    });
+  });
+
+  return tables.sort((a, b) => a.sort_order - b.sort_order);
 }
 
 /**
@@ -160,7 +268,30 @@ function normalizeBlog(raw: unknown): Blog | null {
     published_at: item.published_at ? String(item.published_at) : null,
     created_at: String(item.created_at || new Date().toISOString()),
     updated_at: String(item.updated_at || new Date().toISOString()),
+    contentParagraphs: normalizeParagraphs(
+      item.contentParagraphs || item.content_paragraphs
+    ),
+    contentTables: normalizeTables(item.contentTables || item.content_tables),
   };
+}
+
+/**
+ * Fetches a single blog (with tables and paragraphs) by UUID.
+ */
+export async function fetchBlogById(uuid: string): Promise<Blog | null> {
+  if (!uuid) return null;
+  try {
+    const res = await fetch(`${BLOG_BY_ID_API_URL}/${encodeURIComponent(uuid)}`, {
+      next: { revalidate: 60 },
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return normalizeBlog(json?.data ?? json);
+  } catch (err) {
+    console.error(`Error in fetchBlogById for "${uuid}":`, err);
+    return null;
+  }
 }
 
 /**
@@ -301,14 +432,13 @@ export async function fetchBlogBySlug(
       );
 
       if (found) {
-        if (!options?.allowUnpublished && found.status !== "published") {
-          // If unpublished and not explicitly allowed, return it only if it's the requested slug
-          // so single blog details page can still render a preview notice instead of blank 404
-          return found;
-        }
-        return found;
+        const detailed = await fetchBlogById(found.uuid);
+        return detailed || found;
       }
     }
+
+    const byId = await fetchBlogById(decodedSlug);
+    if (byId) return byId;
 
     // 2. Fallback: fetch list and search in items
     const all = await fetchBlogs({ includeArchived: true, status: "all" });
@@ -318,7 +448,9 @@ export async function fetchBlogBySlug(
         b.uuid.toLowerCase() === decodedSlug.toLowerCase()
     );
 
-    return match || null;
+    if (!match) return null;
+    const detailed = await fetchBlogById(match.uuid);
+    return detailed || match;
   } catch (err) {
     console.error(`Error in fetchBlogBySlug for "${slug}":`, err);
     return null;

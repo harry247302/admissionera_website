@@ -88,7 +88,7 @@ export default async function BlogSlugPage({ params }: Props) {
     notFound();
   }
 
-  const relatedBlogs = await fetchRelatedBlogs(blog, 3);
+  const relatedBlogs = await fetchRelatedBlogs(blog, 5);
 
   // Build JSON-LD structured data for the article
   const imageUrl = resolveBlogImageUrl(blog.featured_image);

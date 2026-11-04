@@ -12,18 +12,17 @@ import {
   Tag,
   ChevronRight,
   User,
-  ExternalLink,
+  CheckCircle2,
 } from "lucide-react";
-import type { Blog } from "@/lib/blogs";
+import type { Blog, BlogContentTable } from "@/lib/blogs";
 import {
   formatBlogDate,
   calculateReadingTime,
   sanitizeExcerpt,
   resolveBlogImageUrl,
+  blogBodyText,
 } from "@/lib/blogs";
-import { BlogCard } from "./BlogCard";
 
-// Social share icons as inline SVGs (no extra dependency)
 const WhatsAppIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden>
     <path d="M20.52 3.48A11.93 11.93 0 0 0 12 0C5.37 0 0 5.37 0 12c0 2.12.55 4.18 1.6 6L0 24l6.2-1.62A12 12 0 0 0 12 24c6.63 0 12-5.37 12-12 0-3.2-1.25-6.22-3.48-8.52ZM12 22a9.94 9.94 0 0 1-5.08-1.39l-.36-.22-3.73.98 1-3.64-.24-.37A9.95 9.95 0 0 1 2 12C2 6.48 6.48 2 12 2c2.67 0 5.18 1.04 7.07 2.93A9.93 9.93 0 0 1 22 12c0 5.52-4.48 10-10 10Zm5.47-7.5c-.3-.15-1.77-.87-2.04-.97s-.47-.15-.67.15c-.2.3-.77.97-.95 1.17-.17.2-.35.22-.65.08a8.18 8.18 0 0 1-2.4-1.48 9.02 9.02 0 0 1-1.67-2.08c-.17-.3-.02-.46.13-.61.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52s-.67-1.6-.91-2.2c-.24-.58-.49-.5-.67-.51H7.7c-.2 0-.52.08-.8.37C6.63 8.2 6 8.86 6 10.27s1.03 2.93 1.17 3.13c.15.2 2.03 3.1 4.92 4.35.69.3 1.22.47 1.64.6.69.22 1.32.19 1.81.11.55-.08 1.77-.72 2.02-1.42.25-.7.25-1.29.17-1.42-.07-.13-.27-.2-.57-.35Z" />
@@ -47,15 +46,142 @@ interface BlogDetailsProps {
   relatedBlogs: Blog[];
 }
 
+function looksLikeHtml(value: string) {
+  return /<\/?[a-z][\s\S]*>/i.test(value);
+}
+
+function sanitizeHtml(value: string) {
+  return value.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
+}
+
+function cellText(value: unknown) {
+  if (value == null) return "";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "";
+  }
+}
+
+function tableColumns(table: BlogContentTable) {
+  const columns: string[] = [];
+  for (const row of table.rows) {
+    for (const key of Object.keys(row.content || {})) {
+      if (!columns.includes(key)) columns.push(key);
+    }
+  }
+  return columns;
+}
+
+function ArticleTable({ table }: { table: BlogContentTable }) {
+  const columns = tableColumns(table);
+  const showLabel = table.rows.some((row) => row.label?.trim());
+
+  if (!table.rows.length) return null;
+
+  return (
+    <section className="my-8 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      {table.title ? (
+        <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+          <h3 className="text-base font-bold text-[#17134A]">{table.title}</h3>
+        </div>
+      ) : null}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[480px] text-left text-sm">
+          <thead>
+            <tr className="bg-[#F8F6FF] text-[#17134A]">
+              {showLabel ? (
+                <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Particulars
+                </th>
+              ) : null}
+              {(columns.length ? columns : ["Details"]).map((column) => (
+                <th
+                  key={column}
+                  className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500"
+                >
+                  {column}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {table.rows.map((row) => (
+              <tr key={row.id} className="border-t border-slate-100 align-top">
+                {showLabel ? (
+                  <td className="px-4 py-3 font-semibold text-[#17134A]">{row.label}</td>
+                ) : null}
+                {(columns.length ? columns : ["Details"]).map((column) => (
+                  <td key={column} className="px-4 py-3 leading-6 text-slate-700">
+                    {cellText(columns.length ? row.content?.[column] : row.label) || "—"}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function ParagraphBody({ content }: { content: string }) {
+  if (looksLikeHtml(content)) {
+    return (
+      <div
+        className="prose prose-slate max-w-none prose-p:text-[16px] prose-p:leading-7 prose-p:text-slate-700 prose-headings:font-bold prose-headings:text-[#17134A] prose-strong:text-[#17134A] prose-a:text-era-primary"
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
+      />
+    );
+  }
+
+  const blocks = content
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  return (
+    <div className="space-y-4">
+      {blocks.map((block, index) => (
+        <p
+          key={index}
+          className="whitespace-pre-line text-[16px] leading-7 text-slate-700"
+        >
+          {block}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 export function BlogDetails({ blog, relatedBlogs }: BlogDetailsProps) {
   const [copied, setCopied] = useState(false);
-
   const imageUrl = resolveBlogImageUrl(blog.featured_image);
   const formattedDate = formatBlogDate(blog.published_at || blog.created_at);
-  const readingTime = calculateReadingTime(blog.excerpt || blog.content);
-  const displayExcerpt = sanitizeExcerpt(blog.excerpt, 300);
+  const readingTime = calculateReadingTime(blogBodyText(blog));
+  const displayExcerpt = sanitizeExcerpt(blog.excerpt, 420);
+  const paragraphs = blog.contentParagraphs || [];
+  const tables = blog.contentTables || [];
+  const hasArticleBody = Boolean(blog.content) || paragraphs.length > 0 || tables.length > 0;
 
-  // Derive the shareable URL
+  const contentBlocks = [
+    ...paragraphs.map((paragraph) => ({
+      type: "paragraph" as const,
+      sort: paragraph.sort_order ?? 0,
+      id: paragraph.id,
+      data: paragraph,
+    })),
+    ...tables.map((table) => ({
+      type: "table" as const,
+      sort: table.sort_order ?? 0,
+      id: table.id,
+      data: table,
+    })),
+  ].sort((a, b) => a.sort - b.sort || (a.type === "paragraph" ? -1 : 1));
+
   const shareUrl =
     typeof window !== "undefined"
       ? window.location.href
@@ -70,7 +196,6 @@ export function BlogDetails({ blog, relatedBlogs }: BlogDetailsProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      // Fallback for older browsers
       const el = document.createElement("input");
       el.value = shareUrl;
       document.body.appendChild(el);
@@ -84,11 +209,7 @@ export function BlogDetails({ blog, relatedBlogs }: BlogDetailsProps) {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Breadcrumb */}
-      <nav
-        aria-label="Breadcrumb"
-        className="border-b border-slate-100 bg-white"
-      >
+      <nav aria-label="Breadcrumb" className="border-b border-slate-100 bg-white">
         <div className="era-shell flex items-center gap-1.5 py-3.5 text-xs text-slate-500">
           <Link href="/" className="transition hover:text-era-primary">
             Home
@@ -98,259 +219,150 @@ export function BlogDetails({ blog, relatedBlogs }: BlogDetailsProps) {
             Blogs
           </Link>
           <ChevronRight className="h-3 w-3 text-slate-300" />
-          <span
-            className="max-w-[200px] truncate font-medium text-slate-800 sm:max-w-xs"
-            aria-current="page"
-          >
+          <span className="max-w-[200px] truncate font-medium text-slate-800 sm:max-w-xs" aria-current="page">
             {blog.title}
           </span>
         </div>
       </nav>
 
-      {/* Article Header */}
-      <header className="era-shell pt-8 pb-0 sm:pt-10 lg:pt-12">
-        <div className="mx-auto max-w-3xl">
-          {/* Back button */}
-          <Link
-            href="/blogs"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-xs transition hover:border-purple-200 hover:bg-era-lavender hover:text-era-primary"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Blogs
-          </Link>
-
-          {/* Category */}
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center rounded-full bg-era-lilac px-3.5 py-1 text-xs font-bold text-era-primary">
-              {blog.category}
-            </span>
-            {blog.status !== "published" && (
-              <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-0.5 text-xs font-bold text-amber-700">
-                {blog.status.charAt(0).toUpperCase() + blog.status.slice(1)}
-              </span>
-            )}
-          </div>
-
-          {/* Title */}
-          <h1 className="mt-4 text-2xl font-extrabold tracking-tight text-[#17134A] sm:text-3xl lg:text-4xl">
-            {blog.title}
-          </h1>
-
-          {/* Meta row: date, reading time, author */}
-          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500">
-            <span className="inline-flex items-center gap-1.5">
-              <Calendar className="h-4 w-4 text-slate-400" />
-              <time dateTime={blog.published_at || blog.created_at}>
-                {formattedDate}
-              </time>
-            </span>
-            <span className="h-1 w-1 rounded-full bg-slate-300" />
-            <span className="inline-flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-slate-400" />
-              {readingTime}
-            </span>
-            {blog.author_name && (
-              <>
-                <span className="h-1 w-1 rounded-full bg-slate-300" />
-                <span className="inline-flex items-center gap-1.5">
-                  <User className="h-4 w-4 text-slate-400" />
-                  {blog.author_name}
-                </span>
-              </>
-            )}
-          </div>
-
-          {/* Social Share */}
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Share:
-            </span>
-            <a
-              href={`https://wa.me/?text=${shareTitle}%20${shareUrlEncoded}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Share on WhatsApp"
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 text-xs font-semibold text-green-700 transition hover:bg-green-100"
-            >
-              <WhatsAppIcon />
-              <span className="hidden sm:inline">WhatsApp</span>
-            </a>
-            <a
-              href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrlEncoded}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Share on Facebook"
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
-            >
-              <FacebookIcon />
-              <span className="hidden sm:inline">Facebook</span>
-            </a>
-            <a
-              href={`https://www.linkedin.com/shareArticle?mini=true&url=${shareUrlEncoded}&title=${shareTitle}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Share on LinkedIn"
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 text-xs font-semibold text-sky-700 transition hover:bg-sky-100"
-            >
-              <LinkedInIcon />
-              <span className="hidden sm:inline">LinkedIn</span>
-            </a>
-            <button
-              type="button"
-              onClick={handleCopy}
-              aria-label="Copy article link"
-              className={`inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-xs font-semibold transition ${
-                copied
-                  ? "border-green-200 bg-green-50 text-green-700"
-                  : "border-slate-200 bg-white text-slate-600 hover:border-purple-200 hover:bg-era-lavender hover:text-era-primary"
-              }`}
-            >
-              {copied ? (
-                <Check className="h-4 w-4" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
-              <span>{copied ? "Copied!" : "Copy Link"}</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Featured Image */}
-      {imageUrl && (
-        <div className="era-shell mt-8">
-          <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl bg-slate-100 shadow-lg">
-            <div className="relative aspect-[16/9] w-full">
-              <Image
-                src={imageUrl}
-                alt={blog.title}
-                fill
-                priority
-                sizes="(max-width: 768px) 100vw, 768px"
-                className="object-cover"
-                unoptimized={
-                  imageUrl.startsWith("http") &&
-                  !imageUrl.includes("admissionera.com")
-                }
-                onError={() => {}}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Article Content */}
-      <article className="era-shell py-10">
-        <div className="mx-auto max-w-3xl">
-          {/* Main content or excerpt */}
-          {blog.content ? (
-            <div
-              className="prose prose-slate prose-lg max-w-none prose-headings:font-extrabold prose-headings:tracking-tight prose-headings:text-[#17134A] prose-a:text-era-primary prose-a:no-underline hover:prose-a:underline prose-img:rounded-xl"
-              dangerouslySetInnerHTML={{
-                __html: blog.content.replace(/</g, "\u003c"),
-              }}
-            />
-          ) : displayExcerpt ? (
-            <div className="space-y-6">
-              <p className="text-lg leading-relaxed text-slate-700">
-                {displayExcerpt}
-              </p>
-
-              {/* Notice that full content is not yet available from API */}
-              <div className="rounded-2xl border border-purple-100 bg-gradient-to-br from-[#FAF7FF] to-[#F3E8FF]/60 p-6">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-era-lilac text-era-primary">
-                    <ExternalLink className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-[#17134A]">
-                      Full Article Coming Soon
-                    </p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      The complete article content will be available shortly.
-                      This page shows a preview of the excerpt from the
-                      Admission Era blog.
-                    </p>
-                    <Link
-                      href="/blogs"
-                      className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-era-primary transition hover:text-era-magenta"
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                      Browse all articles
-                    </Link>
-                  </div>
+      <div className="era-shell py-6 sm:py-8 lg:py-10">
+        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px] lg:gap-10">
+          <article className="min-w-0">
+            {imageUrl ? (
+              <div className="overflow-hidden rounded-2xl bg-slate-100 shadow-[0_12px_32px_rgba(23,19,74,0.08)]">
+                <div className="relative aspect-[16/7] w-full min-h-[220px] sm:min-h-[280px]">
+                  <Image
+                    src={imageUrl}
+                    alt={blog.title}
+                    fill
+                    priority
+                    sizes="(max-width: 1024px) 100vw, 780px"
+                    className="object-cover"
+                    unoptimized={imageUrl.startsWith("http") && !imageUrl.includes("admissionera.com")}
+                  />
                 </div>
               </div>
-            </div>
-          ) : (
-            <p className="text-lg leading-relaxed text-slate-600">
-              This article is currently being prepared. Check back shortly for
-              the full content.
-            </p>
-          )}
+            ) : null}
 
-          {/* Tags */}
-          {blog.tags && blog.tags.length > 0 && (
-            <div className="mt-10 border-t border-slate-100 pt-6">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  <Tag className="inline h-3.5 w-3.5 mr-1" />
-                  Tags:
+            <div className="mt-5 flex flex-wrap items-center gap-2.5 text-sm text-slate-500">
+              <span className="inline-flex items-center gap-1.5">
+                <Calendar className="h-4 w-4 text-slate-400" />
+                <time dateTime={blog.published_at || blog.created_at}>{formattedDate}</time>
+              </span>
+              <span className="inline-flex items-center rounded-md bg-[#F20D70] px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
+                {readingTime}
+              </span>
+              {blog.category ? (
+                <span className="inline-flex items-center rounded-full bg-era-lilac px-3 py-1 text-xs font-bold text-era-primary">
+                  {blog.category}
                 </span>
-                {blog.tags.map((tag) => (
-                  <Link
-                    key={tag}
-                    href={`/blogs?search=${encodeURIComponent(tag)}`}
-                    className="inline-flex items-center rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-era-primary ring-1 ring-purple-100 transition hover:bg-era-lilac hover:ring-purple-200"
-                  >
-                    #{tag}
-                  </Link>
-                ))}
-              </div>
+              ) : null}
             </div>
-          )}
 
-          {/* Author Card (if available) */}
-          {blog.author_name && (
-            <div className="mt-8 flex items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50/50 p-5">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-era-lilac text-era-primary text-lg font-bold">
-                {blog.author_name.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <p className="text-sm font-bold text-[#17134A]">
-                  {blog.author_name}
-                </p>
-                <p className="text-xs text-slate-500">
-                  Education Content Writer &mdash; Admission Era
-                </p>
-              </div>
-            </div>
-          )}
+            <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-tight text-[#17134A] sm:text-[34px]">
+              {blog.title}
+            </h1>
 
-          {/* Share again at bottom */}
-          <div className="mt-10 flex flex-col items-center gap-4 rounded-2xl border border-purple-100/80 bg-gradient-to-br from-[#FAF7FF] to-white px-6 py-8 text-center">
-            <p className="text-lg font-bold text-[#17134A]">
-              Found this article helpful?
-            </p>
-            <p className="text-sm text-slate-600">
-              Share it with friends or fellow students exploring their college
-              journey.
-            </p>
-            <div className="flex flex-wrap justify-center gap-2">
+            {displayExcerpt ? (
+              <p className="mt-5 text-[16.5px] leading-8 text-slate-700">{displayExcerpt}</p>
+            ) : null}
+
+            {hasArticleBody ? (
+              <div className="mt-7 space-y-8">
+                {blog.content && !paragraphs.length ? (
+                  looksLikeHtml(blog.content) ? (
+                    <div
+                      className="prose prose-slate max-w-none prose-p:leading-7 prose-headings:text-[#17134A]"
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(blog.content) }}
+                    />
+                  ) : (
+                    <ParagraphBody content={blog.content} />
+                  )
+                ) : null}
+
+                {contentBlocks.map((block) =>
+                  block.type === "paragraph" ? (
+                    <section key={block.id} className="space-y-3">
+                      {block.data.title ? (
+                        <h2 className="text-[20px] font-bold leading-snug text-[#17134A]">
+                          {block.data.title}
+                        </h2>
+                      ) : null}
+                      <ParagraphBody content={block.data.content} />
+                    </section>
+                  ) : (
+                    <ArticleTable key={block.id} table={block.data} />
+                  )
+                )}
+              </div>
+            ) : !displayExcerpt ? (
+              <p className="mt-6 text-lg leading-relaxed text-slate-600">
+                This article is currently being prepared. Check back shortly for the full content.
+              </p>
+            ) : null}
+
+            {blog.tags && blog.tags.length > 0 ? (
+              <div className="mt-10 border-t border-slate-100 pt-6">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <Tag className="mr-1 inline h-3.5 w-3.5" />
+                    Tags:
+                  </span>
+                  {blog.tags.map((tag) => (
+                    <Link
+                      key={tag}
+                      href={`/blogs?search=${encodeURIComponent(tag)}`}
+                      className="inline-flex items-center rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-era-primary ring-1 ring-purple-100 transition hover:bg-era-lilac"
+                    >
+                      #{tag}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {blog.author_name ? (
+              <div className="mt-8 flex items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50/50 p-5">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-era-lilac text-lg font-bold text-era-primary">
+                  {blog.author_name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="inline-flex items-center gap-1.5 text-sm font-bold text-[#17134A]">
+                    <User className="h-4 w-4 text-slate-400" />
+                    {blog.author_name}
+                  </p>
+                  <p className="text-xs text-slate-500">Education writer — Admission Era</p>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-8 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Share:
+              </span>
               <a
                 href={`https://wa.me/?text=${shareTitle}%20${shareUrlEncoded}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-10 items-center gap-2 rounded-xl border border-green-200 bg-white px-4 text-sm font-semibold text-green-700 shadow-xs transition hover:bg-green-50"
+                className="inline-flex h-9 items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 text-xs font-semibold text-green-700 hover:bg-green-100"
               >
                 <WhatsAppIcon />
                 WhatsApp
               </a>
               <a
+                href={`https://www.facebook.com/sharer/sharer.php?u=${shareUrlEncoded}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-9 items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+              >
+                <FacebookIcon />
+                Facebook
+              </a>
+              <a
                 href={`https://www.linkedin.com/shareArticle?mini=true&url=${shareUrlEncoded}&title=${shareTitle}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-10 items-center gap-2 rounded-xl border border-sky-200 bg-white px-4 text-sm font-semibold text-sky-700 shadow-xs transition hover:bg-sky-50"
+                className="inline-flex h-9 items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 text-xs font-semibold text-sky-700 hover:bg-sky-100"
               >
                 <LinkedInIcon />
                 LinkedIn
@@ -358,62 +370,89 @@ export function BlogDetails({ blog, relatedBlogs }: BlogDetailsProps) {
               <button
                 type="button"
                 onClick={handleCopy}
-                className={`inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${
+                className={`inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-xs font-semibold ${
                   copied
                     ? "border-green-200 bg-green-50 text-green-700"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-purple-200 hover:bg-era-lavender hover:text-era-primary"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-era-lavender hover:text-era-primary"
                 }`}
               >
-                {copied ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 {copied ? "Copied!" : "Copy Link"}
               </button>
             </div>
-          </div>
 
-          {/* Back to Blogs CTA */}
-          <div className="mt-8 flex justify-start">
             <Link
               href="/blogs"
-              className="inline-flex items-center gap-2 rounded-xl bg-era-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-era-secondary active:scale-95"
+              className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-era-primary hover:text-era-magenta"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to All Blogs
+              Back to all blogs
             </Link>
-          </div>
-        </div>
-      </article>
+          </article>
 
-      {/* Related Blogs Section */}
-      {relatedBlogs.length > 0 && (
-        <section className="bg-gradient-to-b from-[#FAF7FF] to-white py-12 sm:py-16">
-          <div className="era-shell">
-            <div className="mb-8 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-era-primary">
-                  Related Articles
-                </p>
-                <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-[#17134A]">
-                  You Might Also Like
-                </h2>
+          <aside className="space-y-6 lg:sticky lg:top-24">
+            <div className="overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-b from-[#E8F6FF] to-white p-5 shadow-[0_10px_24px_rgba(14,116,144,0.08)]">
+              <div className="flex items-center justify-between">
+                <Image src="/logo.png" alt="Admission Era" width={140} height={40} className="h-8 w-auto object-contain" />
               </div>
-              <Link href="/blogs" className="era-link text-sm shrink-0">
-                View all <span aria-hidden>→</span>
+              <h2 className="mt-4 text-xl font-extrabold text-[#0B4F8A]">Why Choose Admission Era</h2>
+              <ul className="mt-4 space-y-2.5">
+                {[
+                  "Free video counselling",
+                  "Expert admission guidance",
+                  "University comparison support",
+                  "Personalised shortlists",
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-4 flex items-center gap-1 text-amber-400" aria-hidden>
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <span key={index} className="text-lg">★</span>
+                ))}
+              </div>
+              <Link
+                href="/ai-counselling"
+                className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-xl bg-[#F20D70] text-sm font-bold text-white shadow-[0_8px_18px_rgba(242,13,112,0.28)] transition hover:brightness-105"
+              >
+                Get counselling
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {relatedBlogs.map((rb) => (
-                <BlogCard key={rb.uuid} blog={rb} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+            {relatedBlogs.length > 0 ? (
+              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_24px_rgba(23,19,74,0.04)]">
+                <h2 className="text-lg font-extrabold text-[#17134A]">Related Posts</h2>
+                <ol className="mt-4 space-y-4">
+                  {relatedBlogs.map((related, index) => (
+                    <li key={related.uuid} className="flex gap-3">
+                      <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-[#F20D70] text-xs font-extrabold text-[#F20D70]">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <div className="min-w-0">
+                        <Link
+                          href={`/blogs/${related.slug}`}
+                          className="line-clamp-2 text-sm font-semibold leading-5 text-[#17134A] transition hover:text-era-primary"
+                        >
+                          {related.title}
+                        </Link>
+                        <p className="mt-1 flex items-center gap-2 text-[11px] text-slate-500">
+                          <Clock className="h-3 w-3" />
+                          {calculateReadingTime(related.excerpt || related.content)}
+                          <span className="h-1 w-1 rounded-full bg-slate-300" />
+                          {formatBlogDate(related.published_at || related.created_at)}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ) : null}
+          </aside>
+        </div>
+      </div>
     </div>
   );
 }
-
