@@ -501,3 +501,25 @@ export async function fetchRelatedBlogs(
   }
 }
 
+function blogTimestamp(blog: Blog) {
+  const value = blog.published_at || blog.created_at;
+  const time = value ? new Date(value).getTime() : 0;
+  return Number.isFinite(time) ? time : 0;
+}
+
+export async function fetchLatestBlogs(
+  options: { excludeUuid?: string; excludeSlug?: string; limit?: number } = {},
+): Promise<Blog[]> {
+  const limit = options.limit ?? 5;
+  const { blogs } = await fetchBlogs({ status: "published", limit: 100 });
+
+  return blogs
+    .filter(
+      (blog) =>
+        blog.uuid !== options.excludeUuid &&
+        blog.slug !== options.excludeSlug,
+    )
+    .sort((a, b) => blogTimestamp(b) - blogTimestamp(a))
+    .slice(0, limit);
+}
+

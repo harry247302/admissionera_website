@@ -41,9 +41,18 @@ const LinkedInIcon = () => (
   </svg>
 );
 
+export type BlogUniversityPreview = {
+  uuid: string;
+  name: string;
+  banner: string;
+  logo?: string;
+};
+
 interface BlogDetailsProps {
   blog: Blog;
   relatedBlogs: Blog[];
+  latestBlogs?: Blog[];
+  universities?: BlogUniversityPreview[];
 }
 
 function looksLikeHtml(value: string) {
@@ -157,7 +166,12 @@ function ParagraphBody({ content }: { content: string }) {
   );
 }
 
-export function BlogDetails({ blog, relatedBlogs }: BlogDetailsProps) {
+export function BlogDetails({
+  blog,
+  relatedBlogs,
+  latestBlogs = [],
+  universities = [],
+}: BlogDetailsProps) {
   const [copied, setCopied] = useState(false);
   const imageUrl = resolveBlogImageUrl(blog.featured_image);
   const formattedDate = formatBlogDate(blog.published_at || blog.created_at);
@@ -300,7 +314,7 @@ export function BlogDetails({ blog, relatedBlogs }: BlogDetailsProps) {
                 This article is currently being prepared. Check back shortly for the full content.
               </p>
             ) : null}
-
+            
             {blog.tags && blog.tags.length > 0 ? (
               <div className="mt-10 border-t border-slate-100 pt-6">
                 <div className="flex flex-wrap items-center gap-2">
@@ -320,7 +334,57 @@ export function BlogDetails({ blog, relatedBlogs }: BlogDetailsProps) {
                 </div>
               </div>
             ) : null}
-
+            {universities.length > 0 ? (
+              <section className="mt-10">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-extrabold text-[#17134A]">Top Universities</h2>
+                  <Link
+                    href="/universities"
+                    className="text-xs font-semibold text-era-primary hover:text-era-magenta"
+                  >
+                    View all
+                  </Link>
+                </div>
+                <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+                  {universities.map((university) => {
+                    const imageUrl = university.banner || university.logo;
+                    const initials = university.name
+                      .split(/\s+/)
+                      .filter((word) => /^[A-Za-z]/.test(word) && word.toLowerCase() !== "of")
+                      .slice(0, 2)
+                      .map((word) => word[0])
+                      .join("");
+                    return (
+                      <li key={university.uuid}>
+                        <Link
+                          href={`/universities/${university.uuid}`}
+                          className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_8px_20px_rgba(23,19,74,0.05)] transition hover:-translate-y-0.5 hover:border-era-lilac hover:shadow-[0_12px_24px_rgba(23,19,74,0.08)]"
+                        >
+                          <div className="relative aspect-[16/10] w-full bg-slate-100">
+                            {imageUrl ? (
+                              <Image
+                                src={imageUrl}
+                                alt=""
+                                fill
+                                sizes="(max-width: 640px) 50vw, 220px"
+                                className="object-cover transition duration-300 group-hover:scale-[1.03]"
+                              />
+                            ) : (
+                              <span className="flex h-full w-full items-center justify-center text-sm font-bold text-era-primary">
+                                {initials}
+                              </span>
+                            )}
+                          </div>
+                          <p className="line-clamp-2 px-3 py-3 text-sm font-bold leading-5 text-[#17134A] group-hover:text-era-primary">
+                            {university.name}
+                          </p>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ) : null}
             {blog.author_name ? (
               <div className="mt-8 flex items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50/50 p-5">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-era-lilac text-lg font-bold text-era-primary">
@@ -448,6 +512,60 @@ export function BlogDetails({ blog, relatedBlogs }: BlogDetailsProps) {
                     </li>
                   ))}
                 </ol>
+              </div>
+            ) : null}
+
+
+           
+
+
+            {latestBlogs.length > 0 ? (
+              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_24px_rgba(23,19,74,0.04)]">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-extrabold text-[#17134A]">Latest Blogs</h2>
+                  <Link
+                    href="/blogs"
+                    className="text-xs font-semibold text-era-primary hover:text-era-magenta"
+                  >
+                    View all
+                  </Link>
+                </div>
+                <ul className="mt-4 space-y-3">
+                  {latestBlogs.map((item) => {
+                    const imageUrl = resolveBlogImageUrl(item.featured_image);
+                    return (
+                      <li key={item.uuid}>
+                        <Link
+                          href={`/blogs/${item.slug}`}
+                          className="group flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-2 pr-3 transition hover:border-era-lilac hover:bg-white"
+                        >
+                          <div className="relative h-14 w-[88px] shrink-0 overflow-hidden rounded-lg bg-slate-200">
+                            {imageUrl ? (
+                              <Image
+                                src={imageUrl}
+                                alt=""
+                                fill
+                                sizes="88px"
+                                className="object-cover transition duration-200 group-hover:scale-105"
+                                unoptimized={
+                                  imageUrl.startsWith("http") && !imageUrl.includes("admissionera.com")
+                                }
+                              />
+                            ) : null}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="line-clamp-2 text-sm font-semibold leading-5 text-[#17134A] group-hover:text-era-primary">
+                              {item.title}
+                            </p>
+                            <p className="mt-1 text-[11px] text-slate-500">
+                              {formatBlogDate(item.published_at || item.created_at)}
+                            </p>
+                          </div>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
             ) : null}
           </aside>
