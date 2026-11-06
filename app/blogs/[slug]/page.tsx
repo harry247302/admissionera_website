@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { fetchBlogBySlug, fetchRelatedBlogs, sanitizeExcerpt, resolveBlogImageUrl } from "@/lib/blogs";
+import { fetchBlogBySlug, fetchLatestBlogs, fetchRelatedBlogs, sanitizeExcerpt, resolveBlogImageUrl } from "@/lib/blogs";
 import { BlogDetails } from "@/components/blogs/BlogDetails";
+import { fetchDiscoveryUniversities } from "@/lib/universities";
 
 const SITE_URL = "https://admissionera.com";
 
@@ -88,7 +89,24 @@ export default async function BlogSlugPage({ params }: Props) {
     notFound();
   }
 
-  const relatedBlogs = await fetchRelatedBlogs(blog, 5);
+  const [relatedBlogs, latestBlogs] = await Promise.all([
+    fetchRelatedBlogs(blog, 5),
+    fetchLatestBlogs({ excludeUuid: blog.uuid, excludeSlug: blog.slug, limit: 5 }),
+  ]);
+  const universities = await fetchDiscoveryUniversities()
+    .then((rows) =>
+      rows
+        .filter((uni) => uni.status !== "INACTIVE")
+        .sort((a, b) => (a.worldRank ?? 9999) - (b.worldRank ?? 9999) || (b.ratings ?? 0) - (a.ratings ?? 0))
+        .slice(0, 6)
+        .map((uni) => ({
+          uuid: uni.uuid,
+          name: uni.name,
+          banner: uni.banner,
+          logo: uni.logo,
+        })),
+    )
+    .catch(() => []);
 
   // Build JSON-LD structured data for the article
   const imageUrl = resolveBlogImageUrl(blog.featured_image);
@@ -146,7 +164,12 @@ export default async function BlogSlugPage({ params }: Props) {
           __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
         }}
       />
-      <BlogDetails blog={blog} relatedBlogs={relatedBlogs} />
+      <BlogDetails
+        blog={blog}
+        relatedBlogs={relatedBlogs}
+        latestBlogs={latestBlogs}
+        universities={universities}
+      />
     </main>
   );
 }
