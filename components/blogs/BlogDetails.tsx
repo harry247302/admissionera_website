@@ -202,8 +202,10 @@ function RichContent({ content }: { content: string }) {
 /* ─── Sidebar ────────────────────────────────────────────────────────── */
 function Sidebar({
   relatedBlogs,
+  latestBlogs,
 }: {
   relatedBlogs: Blog[];
+  latestBlogs: Blog[];
 }) {
   return (
     <div className="space-y-5">
@@ -282,6 +284,59 @@ function Sidebar({
               </li>
             ))}
           </ol>
+        </div>
+      )}
+
+      {latestBlogs.length > 0 && (
+        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_24px_rgba(23,19,74,0.04)]">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-base font-extrabold text-[#17134A] xl:text-lg">
+              Latest Blogs
+            </h2>
+            <Link
+              href="/blogs"
+              className="text-xs font-semibold text-era-primary hover:text-era-magenta"
+            >
+              View all
+            </Link>
+          </div>
+          <ul className="mt-4 space-y-3">
+            {latestBlogs.map((item) => {
+              const imageUrl = resolveBlogImageUrl(item.featured_image);
+              return (
+                <li key={item.uuid}>
+                  <Link
+                    href={`/blogs/${item.slug}`}
+                    className="group flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-2 pr-3 transition hover:border-era-lilac hover:bg-white"
+                  >
+                    <div className="relative h-14 w-[88px] shrink-0 overflow-hidden rounded-lg bg-slate-200">
+                      {imageUrl ? (
+                        <Image
+                          src={imageUrl}
+                          alt=""
+                          fill
+                          sizes="88px"
+                          className="object-cover transition duration-200 group-hover:scale-105"
+                          unoptimized={
+                            imageUrl.startsWith("http") &&
+                            !imageUrl.includes("admissionera.com")
+                          }
+                        />
+                      ) : null}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="line-clamp-2 text-sm font-semibold leading-5 text-[#17134A] group-hover:text-era-primary">
+                        {item.title}
+                      </p>
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        {formatBlogDate(item.published_at || item.created_at)}
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
     </div>
@@ -484,7 +539,7 @@ export function BlogDetails({
                 This article is currently being prepared. Check back shortly for
                 the full content.
               </p>
-            ) : null}
+            )}
             
             {blog.tags && blog.tags.length > 0 ? (
               <div className="mt-10 border-t border-slate-100 pt-6">
@@ -571,7 +626,7 @@ export function BlogDetails({
                   </p>
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* Share buttons */}
             <div className="mt-6 flex flex-wrap items-center gap-2 sm:mt-8">
@@ -637,89 +692,10 @@ export function BlogDetails({
                 Back to all blogs
               </Link>
             </div>
+          </article>
 
-            {relatedBlogs.length > 0 ? (
-              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_24px_rgba(23,19,74,0.04)]">
-                <h2 className="text-lg font-extrabold text-[#17134A]">Related Posts</h2>
-                <ol className="mt-4 space-y-4">
-                  {relatedBlogs.map((related, index) => (
-                    <li key={related.uuid} className="flex gap-3">
-                      <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-[#F20D70] text-xs font-extrabold text-[#F20D70]">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <div className="min-w-0">
-                        <Link
-                          href={`/blogs/${related.slug}`}
-                          className="line-clamp-2 text-sm font-semibold leading-5 text-[#17134A] transition hover:text-era-primary"
-                        >
-                          {related.title}
-                        </Link>
-                        <p className="mt-1 flex items-center gap-2 text-[11px] text-slate-500">
-                          <Clock className="h-3 w-3" />
-                          {calculateReadingTime(related.excerpt || related.content)}
-                          <span className="h-1 w-1 rounded-full bg-slate-300" />
-                          {formatBlogDate(related.published_at || related.created_at)}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            ) : null}
-
-
-           
-
-
-            {latestBlogs.length > 0 ? (
-              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_24px_rgba(23,19,74,0.04)]">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-extrabold text-[#17134A]">Latest Blogs</h2>
-                  <Link
-                    href="/blogs"
-                    className="text-xs font-semibold text-era-primary hover:text-era-magenta"
-                  >
-                    View all
-                  </Link>
-                </div>
-                <ul className="mt-4 space-y-3">
-                  {latestBlogs.map((item) => {
-                    const imageUrl = resolveBlogImageUrl(item.featured_image);
-                    return (
-                      <li key={item.uuid}>
-                        <Link
-                          href={`/blogs/${item.slug}`}
-                          className="group flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-2 pr-3 transition hover:border-era-lilac hover:bg-white"
-                        >
-                          <div className="relative h-14 w-[88px] shrink-0 overflow-hidden rounded-lg bg-slate-200">
-                            {imageUrl ? (
-                              <Image
-                                src={imageUrl}
-                                alt=""
-                                fill
-                                sizes="88px"
-                                className="object-cover transition duration-200 group-hover:scale-105"
-                                unoptimized={
-                                  imageUrl.startsWith("http") && !imageUrl.includes("admissionera.com")
-                                }
-                              />
-                            ) : null}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="line-clamp-2 text-sm font-semibold leading-5 text-[#17134A] group-hover:text-era-primary">
-                              {item.title}
-                            </p>
-                            <p className="mt-1 text-[11px] text-slate-500">
-                              {formatBlogDate(item.published_at || item.created_at)}
-                            </p>
-                          </div>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ) : null}
+          <aside className="min-w-0 md:sticky md:top-24">
+            <Sidebar relatedBlogs={relatedBlogs} latestBlogs={latestBlogs} />
           </aside>
         </div>
       </div>
