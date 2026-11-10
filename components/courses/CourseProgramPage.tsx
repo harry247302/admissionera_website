@@ -1,1088 +1,935 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import type {
-  CourseContentTable,
-  CourseDetail,
-} from "@/lib/courseDiscovery";
+import type { CourseDetail, CourseContentTable } from "@/lib/courseDiscovery";
 import { resolveMediaUrl } from "@/lib/universities";
-import {
-  ContentRenderer,
-  FAQAccordion,
-} from "@/components/courses/CourseContentBlocks";
 
-const NAV_LINKS = [
-  { id: "overview", label: "Overview" },
-  { id: "specializations", label: "Specializations" },
-  { id: "features", label: "Key Features" },
-  { id: "eligibility", label: "Eligibility" },
-  { id: "curriculum", label: "Curriculum" },
-  { id: "careers", label: "Career Opportunities" },
-  { id: "faqs", label: "FAQs" },
-] as const;
-
-const FEATURE_META = [
-  { title: "Flexible Learning", tone: "bg-[#e8f1ff] text-[#2f6fed]", match: /flexib|online mode|anytime/i },
-  { title: "Industry-Relevant Curriculum", tone: "bg-[#e7f7f4] text-[#1aa58a]", match: /curriculum|subject|programming|market/i },
-  { title: "Recognised Degree", tone: "bg-[#f3e8ff] text-[#7c3aed]", match: /ugc|aicte|deb|approv|recogn/i },
-  { title: "Career Growth", tone: "bg-[#fff1e8] text-[#ea580c]", match: /career|professional|industr|skill/i },
-] as const;
-
-const specIconProps = {
-  viewBox: "0 0 24 24",
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 1.9,
-  strokeLinecap: "round" as const,
-  strokeLinejoin: "round" as const,
-  "aria-hidden": true,
+// ─── Color tokens ─────────────────────────────────────────────────────────────
+const C = {
+  primary: "#94143C",
+  dark: "#4A1028",
+  light: "#FFF5F7",
+  border: "#EAE5E8",
+  text: "#171421",
+  muted: "#6B6578",
 };
 
-function SparkleIcon() {
-  return (
-    <svg {...specIconProps} className="h-3.5 w-3.5">
-      <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.5 6.5l2 2M15.5 15.5l2 2M6.5 17.5l2-2M15.5 8.5l2-2" />
-    </svg>
-  );
-}
-
-function FlameIcon() {
-  return (
-    <svg {...specIconProps} className="h-3.5 w-3.5">
-      <path d="M12 3c2.5 3 4.5 5.4 4.5 8.6A4.5 4.5 0 0 1 12 16a4.5 4.5 0 0 1-4.5-4.4c0-1.6.7-2.9 1.7-4 .2 1.4 1 2.4 2 2.9C11 8.3 11.3 5.6 12 3Z" />
-      <path d="M8 18.5c1 1.6 2.4 2.5 4 2.5s3-.9 4-2.5" />
-    </svg>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg {...specIconProps} className="h-4 w-4 text-[#430f74]">
-      <rect x="4" y="5" width="16" height="15" rx="2.5" />
-      <path d="M4 10h16M9 3v4M15 3v4" />
-    </svg>
-  );
-}
-
-function WifiIcon() {
-  return (
-    <svg {...specIconProps} className="h-4 w-4 text-[#430f74]">
-      <path d="M2.5 9a14 14 0 0 1 19 0M5.5 12.5a9.5 9.5 0 0 1 13 0M8.8 15.8a4.8 4.8 0 0 1 6.4 0" />
-      <circle cx="12" cy="19" r="1" fill="currentColor" />
-    </svg>
-  );
-}
-
-const SPEC_BENEFITS = [
-  {
-    label: "UGC Recognized",
-    icon: (
-      <svg {...specIconProps} className="h-5 w-5">
-        <path d="M3 9.5 12 5l9 4.5-9 4.5-9-4.5Z" />
-        <path d="M7 11.5V16c0 1 2.2 2.5 5 2.5s5-1.5 5-2.5v-4.5M21 9.5V14" />
-      </svg>
-    ),
-  },
-  {
-    label: "Comprehensive Curriculum",
-    icon: (
-      <svg {...specIconProps} className="h-5 w-5">
-        <path d="M12 6.5C10.5 5.3 8.5 4.8 4 5v13c4.5-.2 6.5.3 8 1.5M12 6.5c1.5-1.2 3.5-1.7 8-1.5v13c-4.5-.2-6.5.3-8 1.5M12 6.5v13" />
-      </svg>
-    ),
-  },
-  {
-    label: "Career Opportunities",
-    icon: (
-      <svg {...specIconProps} className="h-5 w-5">
-        <path d="M6 19v-5M12 19V9M18 19V5" />
-      </svg>
-    ),
-  },
-  {
-    label: "Flexible Learning",
-    icon: (
-      <svg {...specIconProps} className="h-5 w-5">
-        <path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z" />
-      </svg>
-    ),
-  },
-];
-
-function stripTags(value?: string | null) {
-  return String(value || "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function tableValue(
-  row: CourseContentTable["rows"][number],
-  preferredKeys: string[] = ["Details", "Value", "Description"]
-) {
-  for (const key of preferredKeys) {
-    if (row.content?.[key]) return row.content[key];
-  }
-  const values = Object.values(row.content || {}).filter(Boolean);
-  return values[values.length - 1] || row.label || "";
-}
-
-/** Column headers from row.content keys, preferring Key Features then Details. */
-function getTableColumns(rows: CourseContentTable["rows"] = []) {
-  const set = new Set<string>();
-  rows.forEach((row) => {
-    Object.keys(row.content || {}).forEach((key) => set.add(key));
-  });
-  const cols = [...set];
-  cols.sort((a, b) => {
-    const rank = (key: string) =>
-      (/key\s*feature/i.test(key) ? 0 : /detail/i.test(key) ? 1 : 2);
-    return rank(a) - rank(b) || a.localeCompare(b);
-  });
-  return cols.length ? cols : ["Key Features", "Details"];
-}
-
-function cellValue(
-  row: CourseContentTable["rows"][number],
-  column: string
-) {
-  const fromContent = row.content?.[column];
-  if (fromContent != null && String(fromContent).trim() !== "") {
-    return String(fromContent);
-  }
-  if (/key\s*feature/i.test(column)) return row.label || "—";
-  return tableValue(row) || "—";
-}
-
-function findSnapshotValue(tables: CourseContentTable[], labels: string[]) {
-  for (const table of tables) {
-    for (const row of table.rows || []) {
-      const hay = `${row.label} ${Object.values(row.content || {}).join(" ")}`.toLowerCase();
-      if (labels.some((label) => hay.includes(label.toLowerCase()))) {
-        return tableValue(row);
-      }
-    }
-  }
-  return "";
-}
-function paragraphByTitle(course: CourseDetail, matchers: string[]) {
-  return course.paragraphs.find((p) =>
-    matchers.some((m) => p.title?.toLowerCase().includes(m.toLowerCase()))
-  );
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function stripTags(v?: string | null) {
+  return String(v || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function splitLines(text = "") {
   return text
     .split(/\n+/)
-    .map((line) => line.replace(/^\d+\.\s*/, "").trim())
-    .filter((line) => line.length > 2);
+    .map((l) => l.replace(/^\d+\.\s*/, "").replace(/^[-•*]\s*/, "").trim())
+    .filter((l) => l.length > 2);
 }
 
 function splitCareerRoles(text = "") {
   return splitLines(text)
-    .flatMap((line) => line.split(/,\s*/))
-    .map((item) => item.replace(/^\d+\.\s*/, "").replace(/^[-•]\s*/, "").trim())
-    .filter((item) => item && !/more\.?$/i.test(item) && item.length < 70)
+    .flatMap((l) => l.split(/,\s*/))
+    .map((s) => s.trim())
+    .filter((s) => s && !/more\.?$/i.test(s) && s.length < 70)
     .slice(0, 10);
 }
 
-function shortProgramLabel(course: CourseDetail) {
+function firstSentence(text = "") {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (!clean) return "";
+  const m = clean.match(/^(.{40,}?[.!?])\s/);
+  return m?.[1] || clean.slice(0, 180);
+}
+
+function findTableValue(tables: CourseContentTable[], labels: string[]) {
+  for (const t of tables) {
+    for (const row of t.rows || []) {
+      const hay = `${row.label} ${Object.values(row.content || {}).join(" ")}`.toLowerCase();
+      if (labels.some((l) => hay.includes(l.toLowerCase()))) {
+        const v = Object.values(row.content || {}).find(Boolean);
+        return v || row.label || "";
+      }
+    }
+  }
+  return "";
+}
+
+function shortLabel(course: CourseDetail) {
   if (course.code) return `Online ${course.code}`;
-  const match = course.name.match(/\(([^)]+)\)/);
-  if (match?.[1]) return `Online ${match[1]}`;
+  const m = course.name.match(/\(([^)]+)\)/);
+  if (m?.[1]) return `Online ${m[1]}`;
   return course.name.split(" ").slice(0, 3).join(" ");
 }
 
-function levelBadge(level = "") {
-  if (/under|ug|bachelor/i.test(level)) return "UG Program";
-  if (/post|pg|master/i.test(level)) return "PG Program";
-  return level || "Program";
+function parseRichLines(content = "") {
+  const norm = String(content).replace(/\r\n/g, "\n").replace(/\\n/g, "\n").trim();
+  if (!norm) return [];
+  return norm
+    .split(/\n+/)
+    .map((l) => l.replace(/^[-•*]\s*/, "").replace(/^\d+\.\s*/, "").trim())
+    .filter((l) => l.length > 2);
 }
 
-function DiamondIcon({ className = "h-2.5 w-2.5" }: { className?: string }) {
+// ─── Tiny SVG Icons ───────────────────────────────────────────────────────────
+const SvgProps = {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.8 as number,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  "aria-hidden": true as true,
+};
+
+function Ico({ d, className = "h-5 w-5" }: { d: string; className?: string }) {
   return (
-    <svg viewBox="0 0 12 12" className={className} aria-hidden fill="currentColor">
-      <path d="M6 1.2 10.8 6 6 10.8 1.2 6 6 1.2Z" />
+    <svg {...SvgProps} className={className}>
+      <path d={d} />
     </svg>
   );
 }
 
-function HighlightIcon({ type }: { type: "degree" | "duration" | "mode" | "recognition" }) {
-  const common = "h-5 w-5 shrink-0 text-[#1e3a5f]";
-  if (type === "duration") {
-    return (
-      <svg viewBox="0 0 24 24" className={common} fill="none" aria-hidden>
-        <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.7" />
-        <path d="M12 8v4.2l2.8 1.6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  if (type === "mode") {
-    return (
-      <svg viewBox="0 0 24 24" className={common} fill="none" aria-hidden>
-        <rect x="3.5" y="5" width="17" height="11.5" rx="2" stroke="currentColor" strokeWidth="1.7" />
-        <path d="M8 19h8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  if (type === "recognition") {
-    return (
-      <svg viewBox="0 0 24 24" className={common} fill="none" aria-hidden>
-        <path d="M4 9.2 12 5.5l8 3.7-8 3.7L4 9.2Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-        <path d="M7 12.2v3.8c0 .8 2.2 2.2 5 2.2s5-1.4 5-2.2v-3.8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      </svg>
-    );
-  }
+function CheckCircleIco({ className = "h-5 w-5" }) {
   return (
-    <svg viewBox="0 0 24 24" className={common} fill="none" aria-hidden>
-      <path d="M7 4.5h7.2L17 7.3V19a1.5 1.5 0 0 1-1.5 1.5H7A1.5 1.5 0 0 1 5.5 19V6A1.5 1.5 0 0 1 7 4.5Z" stroke="currentColor" strokeWidth="1.7" />
-      <path d="M14 4.8V7.5h2.8" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+    <svg {...SvgProps} className={className}>
+      <circle cx="12" cy="12" r="8" />
+      <path d="m8.5 12 2.3 2.3L15.5 9.5" />
     </svg>
   );
 }
 
-function OverviewRowIcon({ label }: { label: string }) {
-  const key = label.toLowerCase();
-  const cls = "h-4 w-4 text-[#1e3a5f]";
-  if (/duration|year/.test(key)) {
-    return (
-      <svg viewBox="0 0 24 24" className={cls} fill="none" aria-hidden>
-        <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.7" />
-        <path d="M12 8v4.2l2.8 1.6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  if (/fee|tuition|inr/.test(key)) {
-    return (
-      <svg viewBox="0 0 24 24" className={cls} fill="none" aria-hidden>
-        <path d="M7 7h8a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-        <path d="M12 4v16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  if (/eligib/.test(key)) {
-    return (
-      <svg viewBox="0 0 24 24" className={cls} fill="none" aria-hidden>
-        <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.7" />
-        <path d="m8.5 12 2.3 2.3L15.5 9.6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-  if (/mode|learn|online/.test(key)) {
-    return (
-      <svg viewBox="0 0 24 24" className={cls} fill="none" aria-hidden>
-        <rect x="3.5" y="5" width="17" height="11.5" rx="2" stroke="currentColor" strokeWidth="1.7" />
-        <path d="M8 19h8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  if (/career|recruit/.test(key)) {
-    return (
-      <svg viewBox="0 0 24 24" className={cls} fill="none" aria-hidden>
-        <rect x="4" y="8" width="16" height="11" rx="2" stroke="currentColor" strokeWidth="1.7" />
-        <path d="M9 8V6.8A1.8 1.8 0 0 1 10.8 5h2.4A1.8 1.8 0 0 1 15 6.8V8" stroke="currentColor" strokeWidth="1.7" />
-      </svg>
-    );
-  }
-  if (/level|under|post/.test(key)) {
-    return (
-      <svg viewBox="0 0 24 24" className={cls} fill="none" aria-hidden>
-        <path d="M5 17V9.5L12 6l7 3.5V17" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-        <path d="M9.5 17v-4h5v4" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-  if (/approv|recogn|ugc/.test(key)) {
-    return (
-      <svg viewBox="0 0 24 24" className={cls} fill="none" aria-hidden>
-        <path d="M12 3.5 19 6.2v5c0 4-2.8 7.3-7 8.3-4.2-1-7-4.3-7-8.3v-5L12 3.5Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-      </svg>
-    );
-  }
+function ChevronDown({ className = "h-4 w-4" }) {
+  return <Ico d="m6 9 6 6 6-6" className={className} />;
+}
+
+// ─── NAV config ───────────────────────────────────────────────────────────────
+const NAV_TABS = [
+  { id: "overview", label: "Overview", icon: "M4 6h16M4 12h16M4 18h7" },
+  { id: "eligibility", label: "Eligibility", icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0 1 12 2.944a11.955 11.955 0 0 1-8.618 3.04A12.02 12.02 0 0 0 3 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016Z" },
+  { id: "curriculum", label: "Curriculum", icon: "M12 6.253v13m0-13c-2.493-1.046-5-1.5-7-1.5v13c2 0 4.5.454 7 1.5m0-13c2.493-1.046 5-1.5 7-1.5v13c-2 0-4.5.454-7 1.5" },
+  { id: "careers", label: "Career Opportunities", icon: "M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0M12 12.75h.008v.008H12v-.008Z" },
+  { id: "faqs", label: "FAQ", icon: "M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" },
+] as const;
+
+const ADMISSION_STEPS = [
+  { num: "01", label: "Check Eligibility", icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0 1 12 2.944a11.955 11.955 0 0 1-8.618 3.04A12.02 12.02 0 0 0 3 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016Z" },
+  { num: "02", label: "Fill Online Application", icon: "M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" },
+  { num: "03", label: "Document Verification", icon: "M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" },
+  { num: "04", label: "Pay Application Fee", icon: "M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" },
+  { num: "05", label: "Get Enrollment Number", icon: "M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Zm6-10.125a1.875 1.875 0 1 1-3.75 0 1.875 1.875 0 0 1 3.75 0Zm1.294 6.336a6.721 6.721 0 0 1-3.17.789 6.721 6.721 0 0 1-3.168-.789 3.376 3.376 0 0 1 6.338 0Z" },
+];
+
+const FEATURE_CARDS = [
+  { title: "Flexible Learning", sub: "Study anytime, anywhere at your own pace", icon: "M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" },
+  { title: "Industry Relevant Curriculum", sub: "Updated as per latest industry trends", icon: "M12 6.253v13m0-13c-2.493-1.046-5-1.5-7-1.5v13c2 0 4.5.454 7 1.5m0-13c2.493-1.046 5-1.5 7-1.5v13c-2 0-4.5.454-7 1.5" },
+  { title: "Learn from Expert Faculty", sub: "Guidance from industry practitioners", icon: "M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" },
+  { title: "Career Support", sub: "Dedicated placement & mentoring support", icon: "M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0M12 12.75h.008v.008H12v-.008Z" },
+];
+
+const CAREER_ICONS = [
+  "M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0H3",
+  "M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z",
+  "M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 2.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 2.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125",
+  "M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z",
+  "M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3",
+  "M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z",
+  "M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z",
+  "M14.25 9.75 16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z",
+];
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function SectionHeading({ children }: { children: ReactNode }) {
   return (
-    <svg viewBox="0 0 24 24" className={cls} fill="none" aria-hidden>
-      <path d="M4 8.8 12 5l8 3.8-8 3.8L4 8.8Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-      <path d="M6.8 11.2v4.2c0 .8 2.2 2.2 5.2 2.2s5.2-1.4 5.2-2.2v-4.2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    </svg>
+    <h2 className="flex items-center gap-3 text-[1.3rem] font-extrabold tracking-tight text-[#171421] sm:text-2xl">
+      <span
+        className="inline-block h-6 w-1 shrink-0 rounded-full"
+        style={{ background: C.primary }}
+        aria-hidden
+      />
+      {children}
+    </h2>
   );
 }
 
-function firstSentence(text = "") {
-  const cleaned = text.replace(/\s+/g, " ").trim();
-  if (!cleaned) return "";
-  const match = cleaned.match(/^(.{40,}?[.!?])\s/);
-  return match?.[1] || cleaned.slice(0, 150);
+function PrimaryBtn({ href, children, className = "" }: { href: string; children: ReactNode; className?: string }) {
+  return (
+    <Link
+      href={href}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-6 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:opacity-90 ${className}`}
+      style={{ background: `linear-gradient(135deg, ${C.primary}, ${C.dark})` }}
+    >
+      {children}
+    </Link>
+  );
 }
 
+function GhostBtn({ href, children, className = "" }: { href: string; children: ReactNode; className?: string }) {
+  return (
+    <Link
+      href={href}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border bg-white px-6 text-sm font-bold transition hover:border-current ${className}`}
+      style={{ borderColor: C.border, color: C.text }}
+    >
+      {children}
+    </Link>
+  );
+}
+
+// ─── Hero ─────────────────────────────────────────────────────────────────────
+function CourseHero({ course, duration, mode }: { course: CourseDetail; duration: string; mode: string }) {
+  const banner = resolveMediaUrl(course.banner) || "/hero/slide-2.png";
+  const about = course.overview || course.description || "";
+  const lead = firstSentence(stripTags(about)) || "A flexible, industry-aligned programme designed for learners seeking recognised credentials and practical outcomes.";
+  const langs = (course.language || "English").split(/[,/|]+/).map((s) => s.trim()).filter(Boolean);
+  const displayTitle = course.code && !course.name.includes(`(${course.code})`)
+    ? course.name.replace(new RegExp(`\\(${course.code}\\)`), "").trim()
+    : course.name;
+  const codeHighlight = course.code ? `(${course.code})` : "";
+
+  return (
+    <section
+      className="relative overflow-hidden text-white"
+      style={{ background: `linear-gradient(135deg, ${C.dark} 0%, ${C.primary} 60%, #c0244f 100%)` }}
+    >
+      {/* Decorative circles */}
+      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-10"
+        style={{ background: "white" }} aria-hidden />
+      <div className="pointer-events-none absolute -bottom-16 right-[30%] h-48 w-48 rounded-full opacity-10"
+        style={{ background: "white" }} aria-hidden />
+
+      <div className="era-shell relative py-8 lg:py-10">
+        {/* Breadcrumb */}
+        <nav className="mb-5 flex flex-wrap items-center gap-1.5 text-[13px] text-white/70" aria-label="Breadcrumb">
+          <Link href="/" className="transition hover:text-white">Home</Link>
+          <span aria-hidden>›</span>
+          <Link href="/programs" className="transition hover:text-white">Courses</Link>
+          <span aria-hidden>›</span>
+          <span className="font-semibold text-white">{shortLabel(course)}</span>
+        </nav>
+
+        <div className="grid gap-8 lg:grid-cols-[1fr_420px] lg:items-center lg:gap-10">
+          {/* Left content */}
+          <div>
+            <span
+              className="mb-4 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest"
+              style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-white" aria-hidden />
+              Online Degree
+            </span>
+
+            <h1 className="text-[2rem] font-extrabold leading-[1.15] tracking-[-0.03em] text-white sm:text-[2.5rem] lg:text-[2.75rem]">
+              {displayTitle}{" "}
+              {codeHighlight && (
+                <span style={{ color: "#fbbf24" }}>{codeHighlight}</span>
+              )}
+            </h1>
+
+            <p className="mt-4 max-w-xl text-[15px] leading-7 text-white/80">{lead}</p>
+
+            {/* Info row */}
+            <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-[13px] font-medium text-white/90">
+              <span className="inline-flex items-center gap-2">
+                <Ico d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.627 48.627 0 0 1 12 20.904a48.627 48.627 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.57 50.57 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" className="h-4 w-4 text-white/70" />
+                {course.degree || "Undergraduate Degree"}
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <Ico d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0H3" className="h-4 w-4 text-white/70" />
+                100% {mode || "Online"}
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <Ico d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" className="h-4 w-4 text-white/70" />
+                {duration || "Flexible Duration"}
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <Ico d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5a17.92 17.92 0 0 1-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-.778.1-1.533.284-2.253" className="h-4 w-4 text-white/70" />
+                {langs.join(", ")}
+              </span>
+            </div>
+
+            {/* CTAs */}
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href="/tools/course-finder"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-bold transition hover:-translate-y-0.5"
+                style={{ color: C.primary }}
+              >
+                Apply Now →
+              </Link>
+              <Link
+                href="/tools/course-finder"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/40 bg-white/10 px-6 text-sm font-bold text-white backdrop-blur transition hover:bg-white/20"
+              >
+                <Ico d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" className="h-4 w-4" />
+                Download Brochure
+              </Link>
+            </div>
+          </div>
+
+          {/* Right: banner image */}
+          <div className="relative hidden overflow-hidden rounded-[1.5rem] lg:block" style={{ height: 360 }}>
+            <Image
+              src={banner}
+              alt={course.name}
+              fill
+              priority
+              sizes="420px"
+              className="object-cover object-top"
+              unoptimized={banner.startsWith("http")}
+            />
+            {/* Floating badge */}
+            <div
+              className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-bold text-white shadow-lg backdrop-blur-sm"
+              style={{ background: "rgba(74,16,40,0.85)" }}
+            >
+              <span className="text-[20px]">&lt;/&gt;</span>
+              Technology
+            </div>
+            {/* Overlay gradient at bottom */}
+            <div
+              className="absolute inset-x-0 bottom-0 h-24"
+              style={{ background: `linear-gradient(to top, ${C.dark}, transparent)` }}
+              aria-hidden
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Course Navigation Tabs ───────────────────────────────────────────────────
+function CourseNavigation({ activeSection }: { activeSection: string }) {
+  return (
+    <nav
+      className="sticky top-0 z-30 w-full border-b bg-white shadow-sm"
+      style={{ borderColor: C.border }}
+      aria-label="Course sections"
+    >
+      <div className="era-shell">
+        <div className="flex overflow-x-auto">
+          {NAV_TABS.map((tab) => {
+            const active = activeSection === tab.id;
+            return (
+              <a
+                key={tab.id}
+                href={`#${tab.id}`}
+                className="relative flex shrink-0 items-center gap-2 px-5 py-4 text-sm font-semibold transition"
+                style={{
+                  color: active ? C.primary : C.muted,
+                  background: active ? C.light : "transparent",
+                  borderBottom: active ? `2px solid ${C.primary}` : "2px solid transparent",
+                }}
+              >
+                <svg {...SvgProps} className="h-4 w-4">
+                  <path d={tab.icon} />
+                </svg>
+                {tab.label}
+              </a>
+            );
+          })}
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+// ─── Enquiry form ─────────────────────────────────────────────────────────────
+function AdmissionForm({ courseName }: { courseName: string }) {
+  const [form, setForm] = useState({ name: "", phone: "", email: "", university: "" });
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("loading");
+    setTimeout(() => setStatus("success"), 1200);
+  }
+
+  return (
+    <div
+      className="rounded-2xl p-5 shadow-[0_8px_30px_rgba(148,20,60,0.12)] sm:p-6"
+      style={{ background: `linear-gradient(160deg, ${C.dark} 0%, ${C.primary} 100%)` }}
+    >
+      <h3 className="text-base font-extrabold text-white">Apply for {shortLabel({ name: courseName, code: "" } as CourseDetail)}</h3>
+      <p className="mt-1 text-[13px] text-white/70">Fill in your details and get admission guidance from our experts.</p>
+
+      {status === "success" ? (
+        <div className="mt-5 rounded-xl bg-white/10 p-5 text-center">
+          <CheckCircleIco className="mx-auto h-10 w-10 text-green-300" />
+          <p className="mt-3 font-bold text-white">Thank you! We&apos;ll reach out soon.</p>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="mt-5 space-y-3" noValidate>
+          {/* Name */}
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2">
+              <Ico d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" className="h-4 w-4 text-white/50" />
+            </span>
+            <input
+              name="name"
+              type="text"
+              required
+              placeholder="Your Name"
+              value={form.name}
+              onChange={handleChange}
+              className="w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-10 pr-4 text-sm text-white placeholder-white/50 focus:border-white/60 focus:outline-none"
+            />
+          </div>
+
+          {/* Phone */}
+          <div className="flex gap-2">
+            <span className="inline-flex items-center rounded-xl border border-white/20 bg-white/10 px-3 text-sm font-semibold text-white/70">
+              +91
+            </span>
+            <div className="relative flex-1">
+              <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2">
+                <Ico d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" className="h-4 w-4 text-white/50" />
+              </span>
+              <input
+                name="phone"
+                type="tel"
+                placeholder="Enter Mobile Number"
+                value={form.phone}
+                onChange={handleChange}
+                className="w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-10 pr-4 text-sm text-white placeholder-white/50 focus:border-white/60 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Email */}
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2">
+              <Ico d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" className="h-4 w-4 text-white/50" />
+            </span>
+            <input
+              name="email"
+              type="email"
+              placeholder="Enter Email Address"
+              value={form.email}
+              onChange={handleChange}
+              className="w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-10 pr-4 text-sm text-white placeholder-white/50 focus:border-white/60 focus:outline-none"
+            />
+          </div>
+
+          {/* University select */}
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2">
+              <Ico d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" className="h-4 w-4 text-white/50" />
+            </span>
+            <select
+              name="university"
+              value={form.university}
+              onChange={handleChange}
+              className="w-full appearance-none rounded-xl border border-white/20 bg-white/10 py-3 pl-10 pr-8 text-sm text-white/80 focus:border-white/60 focus:outline-none"
+            >
+              <option value="" className="text-black">Select University</option>
+              <option value="any" className="text-black">Any University</option>
+            </select>
+            <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2">
+              <ChevronDown className="h-4 w-4 text-white/50" />
+            </span>
+          </div>
+
+          <button
+            type="submit"
+            disabled={status === "loading"}
+            className="mt-2 w-full rounded-xl bg-white py-3 text-sm font-extrabold transition hover:opacity-90 disabled:opacity-60"
+            style={{ color: C.primary }}
+          >
+            {status === "loading" ? "Submitting…" : "Apply Now →"}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+// ─── Course Highlights sidebar ────────────────────────────────────────────────
+function CourseHighlights({ course, duration, feeLabel }: { course: CourseDetail; duration: string; feeLabel: string }) {
+  const rows = [
+    { label: "Degree", value: course.degree || "—", icon: "M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.627 48.627 0 0 1 12 20.904a48.627 48.627 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.57 50.57 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" },
+    { label: "Level", value: course.level || "—", icon: "M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" },
+    { label: "Study Mode", value: course.studyMode || course.attendanceMode || "Online", icon: "M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0H3" },
+    { label: "Duration", value: duration || "—", icon: "M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" },
+    { label: "Language", value: course.language || "English", icon: "M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5a17.92 17.92 0 0 1-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-.778.1-1.533.284-2.253" },
+    { label: "Average Fee", value: feeLabel || "—", icon: "M15 8.25H9m6 3H9m3 6-3-3h1.5a3 3 0 1 0 0-6M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" },
+    { label: "Department", value: course.department || "—", icon: "M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z" },
+  ];
+
+  return (
+    <div className="rounded-2xl border p-5" style={{ borderColor: C.border, background: C.light }}>
+      <h3 className="mb-4 text-base font-extrabold" style={{ color: C.text }}>
+        Course Highlights
+      </h3>
+      <ul className="space-y-3">
+        {rows.map((row) => (
+          <li key={row.label} className="flex items-center gap-3 text-sm">
+            <span
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+              style={{ background: `${C.primary}18`, color: C.primary }}
+            >
+              <Ico d={row.icon} className="h-4 w-4" />
+            </span>
+            <span className="font-medium" style={{ color: C.muted, minWidth: 90 }}>{row.label}</span>
+            <span className="ml-auto font-semibold" style={{ color: C.text }}>{row.value}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ─── Career Opportunities sidebar ────────────────────────────────────────────
+function CareerSidebar({ roles }: { roles: string[] }) {
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? roles : roles.slice(0, 8);
+
+  return (
+    <div className="rounded-2xl border p-5" style={{ borderColor: C.border }}>
+      <h3 className="mb-4 text-base font-extrabold" style={{ color: C.text }}>Career Opportunities</h3>
+      <div className="grid grid-cols-2 gap-2">
+        {visible.map((role, i) => (
+          <div
+            key={role}
+            className="flex items-center gap-2.5 rounded-xl p-2.5 text-[13px] font-semibold"
+            style={{ background: C.light, color: C.text }}
+          >
+            <span
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+              style={{ background: `${C.primary}18`, color: C.primary }}
+            >
+              <Ico d={CAREER_ICONS[i % CAREER_ICONS.length]} className="h-4 w-4" />
+            </span>
+            <span className="line-clamp-2 leading-tight">{role}</span>
+          </div>
+        ))}
+      </div>
+      {roles.length > 8 ? (
+        <button
+          type="button"
+          onClick={() => setShowAll((s) => !s)}
+          className="mt-4 w-full text-sm font-bold transition hover:underline"
+          style={{ color: C.primary }}
+        >
+          {showAll ? "Show less ↑" : `View More Opportunities →`}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+// ─── FAQ Accordion (burgundy theme) ──────────────────────────────────────────
+function BurgundyFAQ({ faqs }: { faqs: CourseDetail["faqs"] }) {
+  const active = faqs.filter((f) => f?.is_active !== false);
+  const [openId, setOpenId] = useState<string | null>(active[0]?.id ?? null);
+  if (!active.length) return null;
+
+  return (
+    <div className="space-y-3">
+      {active.map((faq, idx) => {
+        const open = openId === faq.id;
+        return (
+          <article
+            key={faq.id}
+            className="overflow-hidden rounded-2xl border transition"
+            style={{ borderColor: open ? C.primary : C.border, background: "white" }}
+          >
+            <button
+              type="button"
+              className="flex w-full items-start justify-between gap-4 px-5 py-4 text-left"
+              onClick={() => setOpenId(open ? null : faq.id)}
+              aria-expanded={open}
+            >
+              <span className="text-[15px] font-semibold leading-6" style={{ color: C.text }}>
+                <span className="mr-1.5 font-bold" style={{ color: C.primary }}>Q{idx + 1}.</span>
+                {faq.question.replace(/^Q\d+\.\s*/i, "")}
+              </span>
+              <span
+                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-lg font-bold transition"
+                style={{
+                  background: open ? C.primary : C.light,
+                  color: open ? "white" : C.primary,
+                }}
+              >
+                {open ? "−" : "+"}
+              </span>
+            </button>
+            <div
+              className="grid transition-[grid-template-rows] duration-300"
+              style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+            >
+              <div className="overflow-hidden">
+                <div className="px-5 pb-5 pr-12 text-[14px] leading-7" style={{ color: C.muted }}>
+                  {faq.answer}
+                </div>
+              </div>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Curriculum table with semester tabs ─────────────────────────────────────
+function CurriculumSection({ tables }: { tables: CourseContentTable[] }) {
+  const curriculum = tables.filter(
+    (t) => /curriculum|semester|syllabus|subject/i.test(t.title) && t.rows?.length
+  );
+  if (!curriculum.length) return null;
+
+  const [activeIdx, setActiveIdx] = useState(0);
+  const active = curriculum[activeIdx];
+  const rows = [...(active?.rows || [])].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+  // Try to get column keys
+  const cols = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((r) => Object.keys(r.content || {}).forEach((k) => set.add(k)));
+    return [...set].length ? [...set] : ["Subject / Course", "Type"];
+  }, [rows]);
+
+  return (
+    <div id="curriculum" className="scroll-mt-28">
+      <SectionHeading>Comprehensive Curriculum of the {shortLabel({ name: active?.title || "Course", code: "" } as CourseDetail)}</SectionHeading>
+
+      {/* Semester tabs */}
+      {curriculum.length > 1 && (
+        <div className="mt-5 flex flex-wrap gap-2">
+          {curriculum.map((t, i) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setActiveIdx(i)}
+              className="rounded-lg px-4 py-2 text-sm font-semibold transition"
+              style={{
+                background: i === activeIdx ? C.primary : C.light,
+                color: i === activeIdx ? "white" : C.text,
+                border: `1px solid ${i === activeIdx ? C.primary : C.border}`,
+              }}
+            >
+              {t.title || `Semester ${i + 1}`}
+            </button>
+          ))}
+        </div>
+      )}
+      {curriculum.length === 1 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {/* show individual semesters extracted from rows if any */}
+        </div>
+      )}
+
+      <div className="mt-5 overflow-hidden rounded-2xl border" style={{ borderColor: C.border }}>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr style={{ background: C.primary }}>
+                <th className="px-4 py-3 text-left font-bold text-white">S. No.</th>
+                {cols.map((col) => (
+                  <th key={col} className="px-4 py-3 text-left font-bold text-white">{col}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, idx) => (
+                <tr
+                  key={row.id}
+                  style={{ background: idx % 2 === 0 ? "white" : C.light }}
+                >
+                  <td className="px-4 py-3 font-medium" style={{ color: C.muted }}>{idx + 1}</td>
+                  {cols.map((col) => {
+                    const val = row.content?.[col] ?? (col === cols[0] ? row.label : "—");
+                    return (
+                      <td key={col} className="px-4 py-3" style={{ color: C.text }}>
+                        {val || "—"}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export function CourseProgramPage({ course }: { course: CourseDetail }) {
-  // console.log("course", course);
   const [activeSection, setActiveSection] = useState("overview");
-  const [showAllCurriculum, setShowAllCurriculum] = useState(false);
-  const [showAllFaqs, setShowAllFaqs] = useState(false);
-  const aboutParagraph = paragraphByTitle(course, ["about"]);
-  const featuresParagraph = paragraphByTitle(course, ["key feature", "feature"]);
-  const eligibilityParagraph = paragraphByTitle(course, ["eligibility"]);
 
-  const about =
-    aboutParagraph?.content
-    || course.overview
-    || course.description
-    || `${course.name} is a career-focused programme designed to help learners build skills for the modern workplace.`;
+  // Derived values
+  const duration = findTableValue(course.tables, ["duration"]) || "Flexible";
+  const mode = course.studyMode || course.attendanceMode || findTableValue(course.tables, ["mode"]) || "Online";
+  const feeLabel = findTableValue(course.tables, ["fee", "tuition"]) || "Contact for fee details";
 
-  const heroLead =
-    firstSentence(about)
-    || "A flexible, industry-aligned pathway designed for learners who want recognised credentials and practical outcomes.";
-
-  const duration = findSnapshotValue(course.tables, ["duration"]) || "Flexible duration";
-  const mode =
-    findSnapshotValue(course.tables, ["learning mode", "mode"])
-    || course.studyMode
-    || course.attendanceMode
-    || "Online";
-  const recognition =
-    findSnapshotValue(course.tables, ["recognition", "approvals", "ugc"])
-    || "UGC / AICTE recognised pathways";
-
-  const languages = (course.language || "")
-    .split(/[,/|]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-  const overviewTable =
-    course.tables.find((t) => /overview|glance/i.test(t.title))
-    || course.tables[0];
-  const curriculumTable =
-    course.tables.find((t) => /curriculum|semester|syllabus/i.test(t.title))
-    || course.tables.find((t) => t.id !== overviewTable?.id);
-
-  const careersText =
-    findSnapshotValue(course.tables, ["career prospect", "career"])
-    || course.careerOpportunities
-    || course.faqs.find((f) => /career/i.test(f.question))?.answer
-    || "";
-
-  const careerOptions = useMemo(() => {
-    const roles = splitCareerRoles(careersText);
-    return roles.length
-      ? roles
-      : [
-          "Software Developer",
-          "Web Developer",
-          "Data Analyst",
-          "System Analyst",
-          "Database Administrator",
-          "IT Consultant",
-          "Network Administrator",
-          "Cyber Security Analyst",
-        ];
+  const careersText = course.careerOpportunities || findTableValue(course.tables, ["career"]) || "";
+  const careerRoles = useMemo(() => {
+    const r = splitCareerRoles(careersText);
+    return r.length
+      ? r
+      : ["Software Developer", "System Analyst", "Database Administrator", "Web Developer",
+        "Mobile App Developer", "IT Consultant", "Business Analyst", "Cyber Security Analyst"];
   }, [careersText]);
 
-  const featureCards = useMemo(() => {
-    const lines = splitLines(featuresParagraph?.content || "");
-    return FEATURE_META.map((meta, index) => ({
-      title: meta.title,
-      tone: meta.tone,
-      text:
-        lines.find((line) => meta.match.test(line))
-        || lines[index]
-        || "Built for working professionals and freshers seeking practical, career-ready skills.",
-    }));
-  }, [featuresParagraph?.content]);
+  const activeFaqs = course.faqs.filter((f) => f?.is_active !== false);
 
-  const curriculumRows = [...(curriculumTable?.rows || [])].sort(
-    (a, b) => (a.sort_order || 0) - (b.sort_order || 0)
-  );
-  const visibleCurriculum = showAllCurriculum
-    ? curriculumRows
-    : curriculumRows.slice(0, 10);
+  // About paragraph
+  const aboutPara = course.paragraphs.find((p) => /about/i.test(p.title || ""));
+  const aboutText = aboutPara?.content || course.overview || course.description || "";
+  const aboutLines = parseRichLines(aboutText);
 
-  const breadcrumbLabel = shortProgramLabel(course);
-  const displayTitle = course.code && !course.name.includes(`(${course.code})`)
-    ? `${course.name} (${course.code})`
-    : course.name;
-  const aboutParas = splitLines(about);
-  const degreeLabel = /under|ug|bachelor/i.test(course.level || course.degree || "")
-    ? "UG Degree"
-    : (course.degree || course.level || "Degree");
-  const modeLabel = /online/i.test(mode) ? "Online Learning" : mode;
-  const modeBadge = /online/i.test(mode) ? "Online Mode" : mode;
-  const heroBanner = resolveMediaUrl(course.banner) || "/hero/slide-2.png";
-  const heroHighlights = [
-    {
-      title: "Flexible Learning",
-      text: "Study anytime, anywhere",
-      tone: "teal",
-    },
-    {
-      title: "Industry Relevant Curriculum",
-      text: "Updated as per industry trends",
-      tone: "rose",
-    },
-    {
-      title: "Build Your Tech Career",
-      text: "With endless opportunities",
-      tone: "violet",
-    },
-  ] as const;
-  const activeFaqs = course.faqs.filter((faq) => faq?.is_active === true || faq?.is_active == null);
-  const specializations = course.specializations ?? [];
-  const navLinks = NAV_LINKS.filter(
-    (link) => link.id !== "specializations" || specializations.length > 0
+  // Eligibility paragraph
+  const eligPara = course.paragraphs.find((p) => /eligib/i.test(p.title || ""));
+  const eligText = eligPara?.content || course.eligibility || "";
+  const eligLines = parseRichLines(eligText);
+
+  // Overview paragraphs (non-about, non-eligibility)
+  const contentParas = course.paragraphs.filter(
+    (p) => !/about/i.test(p.title || "") && !/eligib/i.test(p.title || "")
   );
 
+  // Intersection observer for active section
   useEffect(() => {
+    const ids = NAV_TABS.map((t) => t.id);
     const observers: IntersectionObserver[] = [];
-    NAV_LINKS.forEach(({ id }) => {
+    ids.forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) setActiveSection(id);
-        },
+      const obs = new IntersectionObserver(
+        ([entry]) => { if (entry.isIntersecting) setActiveSection(id); },
         { rootMargin: "-30% 0px -55% 0px", threshold: 0.05 }
       );
-      observer.observe(el);
-      observers.push(observer);
+      obs.observe(el);
+      observers.push(obs);
     });
-    return () => observers.forEach((observer) => observer.disconnect());
+    return () => observers.forEach((o) => o.disconnect());
   }, []);
 
   return (
-    <main id="main" className="bg-white text-navy">
-      <section className="relative overflow-hidden bg-[#eef5ff]">
-        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[62%] lg:block">
-          <Image
-            src={heroBanner}
-            alt=""
-            fill
-            priority
-            unoptimized={heroBanner.startsWith("http")}
-            className="object-cover object-[68%_18%]"
-            sizes="62vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#eef5ff] via-[#eef5ff]/70 to-[#eef5ff]/10" />
-        </div>
-        <div className="pointer-events-none absolute -right-16 top-16 hidden h-72 w-72 rounded-full bg-[#d7e6ff]/80 blur-3xl lg:block" />
-        <div className="pointer-events-none absolute right-[22%] bottom-10 hidden h-48 w-48 rounded-full bg-[#e4d9ff]/70 blur-2xl lg:block" />
+    <main id="main" style={{ background: "#F9F9FB", color: C.text }}>
+      {/* ── Hero ── */}
+      <CourseHero course={course} duration={duration} mode={mode} />
 
-        <div className="era-shell relative pt-4 sm:pt-5">
-          <nav className="flex flex-wrap items-center gap-2 text-[13px] text-slate-400" aria-label="Breadcrumb">
-            <Link href="/" className="transition hover:text-[#1e3a5f]">Home</Link>
-            <span aria-hidden>›</span>
-            <Link href="/programs" className="transition hover:text-[#1e3a5f]">Courses</Link>
-            <span aria-hidden>›</span>
-            <span className="font-medium text-[#1e3a5f]">{breadcrumbLabel}</span>
-          </nav>
+      {/* ── Course Navigation ── */}
+      <CourseNavigation activeSection={activeSection} />
 
-          <div className="relative pb-10 pt-8 lg:grid lg:grid-cols-[minmax(0,1.15fr)_260px] lg:items-center lg:gap-10 lg:pb-12 lg:pt-10">
-            <div className="era-reveal max-w-2xl">
-              <div className="inline-flex flex-wrap items-center gap-2 rounded-full bg-white/80 px-3.5 py-1.5 text-[12px] font-semibold text-[#1e3a5f] shadow-sm ring-1 ring-white/70">
-                <span className="inline-flex items-center gap-1.5">
-                  <DiamondIcon className="h-2.5 w-2.5 text-teal-500" />
-                  {levelBadge(course.level)}
-                </span>
-                <span className="h-1 w-1 rounded-full bg-slate-300" aria-hidden />
-                <span>{modeBadge}</span>
-                <span className="h-1 w-1 rounded-full bg-slate-300" aria-hidden />
-                <span className="max-w-[220px] truncate sm:max-w-none">{recognition}</span>
-              </div>
+      {/* ── Main two-column layout ── */}
+      <div className="era-shell py-8 lg:py-10">
+        <div className="grid gap-7 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_360px]">
 
-              <h1 className="mt-5 text-[2rem] font-extrabold tracking-[-0.04em] text-[#12263f] sm:text-4xl lg:text-[2.75rem] lg:leading-[1.15]">
-                {displayTitle}
-              </h1>
+          {/* ════════ LEFT COLUMN ════════ */}
+          <div className="space-y-10 min-w-0">
 
-              <p className="mt-4 max-w-xl text-[15px] leading-7 text-slate-500 sm:text-base">
-                {heroLead}
-
-              </p>
-
-              <div className="mt-5 flex flex-wrap gap-2.5">
-                {(languages.length ? languages : ["English"]).map((lang) => (
-                  <span
-                    key={lang}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[#e8f1ff] px-3.5 py-1.5 text-[12px] font-semibold text-[#2f5fad]"
-                  >
-                    <DiamondIcon className="h-2 w-2 text-[#3b82f6]" />
-                    {lang}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-[13px] font-medium text-[#1e3a5f]">
-                <span className="inline-flex items-center gap-2">
-                  <HighlightIcon type="degree" />
-                  {degreeLabel}
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <HighlightIcon type="duration" />
-                  {duration}
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <HighlightIcon type="mode" />
-                  {modeLabel}
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <HighlightIcon type="recognition" />
-                  <span className="max-w-[220px] truncate sm:max-w-none">{recognition}</span>
-                </span>
-              </div>
-
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link
-                  href="/tools/course-finder"
-                  className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-[#12263f] px-6 text-sm font-bold text-white shadow-[0_10px_24px_rgba(18,38,63,0.22)] transition hover:-translate-y-0.5 hover:bg-[#1a3354]"
-                >
-                  Apply Now
-                  <span aria-hidden>→</span>
-                </Link>
-                <a
-                  href="#overview"
-                  className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-[#c9d2de] bg-white px-6 text-sm font-bold text-[#12263f] transition hover:border-[#12263f]"
-                >
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
-                    <path d="M12 4v10m0 0 3.5-3.5M12 14l-3.5-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M5 18h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                  </svg>
-                  Download Brochure
-                </a>
-              </div>
-            </div>
-
-            <aside 
-            // className="relative z-10 mt-8 hidden w-full flex-col gap-3 justify-self-end lg:mt-0 lg:flex"
-            >
-              <p
-                className="pointer-events-none absolute  font-medium tracking-wide text-slate-400"
-                style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-                aria-hidden
+            {/* About + Overview */}
+            <section id="overview" className="scroll-mt-28">
+              <div
+                className="rounded-2xl border bg-white p-6"
+                style={{ borderColor: C.border }}
               >
-                Learn<br />Today<br />Lead<br />Tomorrow
-              </p>
-              {heroHighlights.map((item) => (
-                <article
-                  key={item.title}
-                  className=""
-                >
-                  <div className={` inline-flex items-center justify-center rounded-xl ${
-                    item.tone === "teal"
-                      ? "bg-teal-50 text-teal-600"
-                      : item.tone === "rose"
-                        ? "bg-rose-50 text-rose-500"
-                        : "bg-violet-50 text-violet-600"
-                  }`}>
-                    {item.tone === "teal" ? (
-                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
-                        <path d="M4 12a8 8 0 1 0 16 0" stroke="currentColor" strokeWidth="1.7" />
-                        <path d="M12 8v4l2.5 1.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                      </svg>
-                    ) : item.tone === "rose" ? (
-                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
-                        <rect x="5" y="6" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.7" />
-                        <path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                      </svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" fill="none" aria-hidden>
-                        <path d="M4 16.5 9 11l4 3.5 7-8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  </div>
-                  <p className="text-sm font-bold text-[#12263f]">{item.title}</p>
-                  <p className="mt-0.5 text-[12px] text-slate-500">{item.text}</p>
-                </article>
-              ))}
-            </aside>
-          </div>
-
-          <nav
-            className="sticky top-3 z-30 overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-white/90 px-2 py-1 shadow-[0_8px_24px_rgba(18,38,63,0.06)] backdrop-blur-md"
-            aria-label="Programme sections"
-          >
-            <div className="flex min-w-max gap-1">
-              {navLinks.map((link) => {
-                const active = activeSection === link.id;
-                return (
-                  <a
-                    key={link.id}
-                    href={`#${link.id}`}
-                    className={`relative shrink-0 px-4 py-3 text-sm font-medium transition ${
-                      active ? "font-semibold text-[#12263f]" : "text-slate-500 hover:text-[#12263f]"
-                    }`}
-                  >
-                    {link.label}
-                    <span
-                      className={`absolute inset-x-3 bottom-1 h-[2px] origin-left rounded-full bg-[#12263f] transition duration-300 ${
-                        active ? "scale-x-100" : "scale-x-0"
-                      }`}
-                    />
-                  </a>
-                );
-              })}
-            </div>
-          </nav>
-        </div>
-      </section>
-
-      <section className="bg-[#f7f9fc] pb-14 pt-6 lg:pb-16 lg:pt-8">
-        <div className="era-shell">
-          <div id="overview" className="scroll-mt-28 grid gap-8 lg:grid-cols-[1.35fr_0.85fr] lg:items-start lg:gap-10">
-            {/* Left: About + Overview table */}
-            <div className="space-y-8">
-              <div>
-                <h2 className="text-2xl font-extrabold tracking-[-0.03em] text-[#12263f] sm:text-[1.85rem]">
-                  {aboutParagraph?.title || `About ${breadcrumbLabel}`}
-                </h2>
-                <div className="mt-4 space-y-4 text-[15px] leading-7 text-slate-600">
-                  {aboutParas.length > 1 ? (
-                    aboutParas.slice(0, 2).map((para) => (
-                      <p key={para.slice(0, 40)}>{para}</p>
-                    ))
-                  ) : (
-                    <p className="whitespace-pre-wrap">{about}</p>
-                  )}
+                <SectionHeading>About {shortLabel(course)}</SectionHeading>
+                <div className="mt-4 space-y-3 text-[15px] leading-7" style={{ color: C.muted }}>
+                  {aboutLines.length
+                    ? aboutLines.map((l, i) => <p key={i}>{l}</p>)
+                    : <p>{aboutText || "Details coming soon."}</p>
+                  }
                 </div>
               </div>
-            </div>
+            </section>
 
-            {/* Right sidebar cards */}
-            <aside className="space-y-5 lg:sticky lg:top-24">
-              <div className="rounded-[1.6rem] bg-[#eaf2ff] p-5 shadow-[0_10px_28px_rgba(18,38,63,0.05)] sm:p-6">
-                <div className="flex items-start gap-4">
-                  <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#dce9ff] text-[#2f6fed]">
-                    <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" aria-hidden>
-                      <circle cx="9" cy="8" r="2.4" stroke="currentColor" strokeWidth="1.7" />
-                      <circle cx="16" cy="9" r="2" stroke="currentColor" strokeWidth="1.7" />
-                      <path d="M4.5 17.5c.8-2.6 2.4-3.9 4.5-3.9s3.7 1.3 4.5 3.9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                      <path d="M14 14.2c1.4-.4 2.7-.2 4.2 1.6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                    </svg>
-                  </span>
-                  <div className="min-w-0">
-                    <h3 className="text-xl font-extrabold leading-snug text-[#12263f]">Get Free Counselling</h3>
-                    <p className="mt-1 text-sm leading-6 text-slate-500">
-                      Talk to our experts and get guidance on admissions, eligibility and fees.
-                    </p>
-                  </div>
+            {/* Key Features */}
+            <section>
+              <div className="rounded-2xl border bg-white p-6" style={{ borderColor: C.border }}>
+                <SectionHeading>Key Features of {shortLabel(course)}</SectionHeading>
+                <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  {FEATURE_CARDS.map((f) => (
+                    <div
+                      key={f.title}
+                      className="flex flex-col items-center rounded-2xl p-4 text-center transition hover:shadow-md"
+                      style={{ background: C.light }}
+                    >
+                      <span
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-xl"
+                        style={{ background: `${C.primary}18`, color: C.primary }}
+                      >
+                        <Ico d={f.icon} className="h-5 w-5" />
+                      </span>
+                      <p className="mt-3 text-[13px] font-bold leading-tight" style={{ color: C.text }}>{f.title}</p>
+                    </div>
+                  ))}
                 </div>
-                <Link
-                  href="/tools/course-finder"
-                  className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#12263f] px-5 text-sm font-bold text-white transition hover:bg-[#1a3354]"
-                >
-                  Book a Free Call
-                  <span aria-hidden>→</span>
-                </Link>
+
+                {/* Info cards: Duration / Fee / Mode */}
+                <div className="mt-6 grid grid-cols-3 gap-4">
+                  {[
+                    { label: "Duration", value: duration, sub: "", icon: "M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" },
+                    { label: "Average Course Fee", value: feeLabel, sub: "(Depending on University)", icon: "M15 8.25H9m6 3H9m3 6-3-3h1.5a3 3 0 1 0 0-6M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" },
+                    { label: "Study Mode", value: mode, sub: "(Learn from Anywhere)", icon: "M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0H3" },
+                  ].map((card) => (
+                    <div
+                      key={card.label}
+                      className="flex flex-col items-center rounded-2xl p-4 text-center"
+                      style={{ background: C.light, border: `1px solid ${C.border}` }}
+                    >
+                      <span
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl"
+                        style={{ background: `${C.primary}18`, color: C.primary }}
+                      >
+                        <Ico d={card.icon} className="h-5 w-5" />
+                      </span>
+                      <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide" style={{ color: C.muted }}>{card.label}</p>
+                      <p className="mt-1 text-sm font-extrabold" style={{ color: C.text }}>{card.value}</p>
+                      {card.sub && <p className="text-[11px]" style={{ color: C.muted }}>{card.sub}</p>}
+                    </div>
+                  ))}
+                </div>
               </div>
+            </section>
 
-              <div className="relative min-h-[325px] overflow-hidden rounded-[18px] bg-[#EAF3FF] pb-[208px] sm:min-h-[340px] sm:pb-[200px]">
-                <div className="absolute right-0 top-0 z-[1] h-[190px] w-[150px] sm:h-[210px] sm:w-[170px] lg:h-[220px] lg:w-[180px]">
-                  <Image
-                    src="/hero/boy.png"
-                    alt="Student preparing for a technology career"
-                    fill
-                    sizes="180px"
-                    className="object-contain object-right-top"
-                  />
-                </div>
-
-                <div className="relative z-10 px-5 pt-5">
-                  <h3 className="max-w-[145px] text-[18px] font-extrabold leading-[1.15] tracking-[-0.03em] text-[#12263f] sm:text-[20px] lg:text-[21px]">
-                    Turn Your Passion for Technology into a Bright Career
-                  </h3>
-                  <span className="mt-3 block h-[3px] w-8 rounded-full bg-[#2f6fed]" aria-hidden />
-                </div>
-
-                <div className="absolute inset-x-4 bottom-4 z-20 rounded-[16px] bg-white p-3.5 shadow-[0_8px_22px_rgba(18,38,63,0.08)]">
-                  <ul className="space-y-3 text-[13px] font-bold leading-5 text-[#12263f] sm:text-sm sm:leading-5">
-                    {[
-                      { label: "Industry Relevant Curriculum", icon: "monitor" },
-                      { label: "Learn from Anywhere", icon: "pin" },
-                      { label: "Career Support & Guidance", icon: "support" },
-                      { label: "Access to Updated Resources", icon: "people" },
-                    ].map((item) => (
-                      <li key={item.label} className="flex items-start gap-3">
-                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E7F7F4] text-[#1AA58A]">
-                          {item.icon === "monitor" ? (
-                            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
-                              <rect x="4" y="5" width="16" height="11" rx="2" stroke="currentColor" strokeWidth="1.7" />
-                              <path d="M8 19h8M12 16v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                            </svg>
-                          ) : item.icon === "pin" ? (
-                            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
-                              <path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10Z" stroke="currentColor" strokeWidth="1.7" />
-                              <circle cx="12" cy="11" r="1.8" stroke="currentColor" strokeWidth="1.7" />
-                            </svg>
-                          ) : item.icon === "support" ? (
-                            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
-                              <path d="M8 12.5 10.2 9l2.3 3 2.2-4 3.3 4.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                              <path d="M4 16.5h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                            </svg>
-                          ) : (
-                            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
-                              <circle cx="9" cy="8.5" r="2.2" stroke="currentColor" strokeWidth="1.7" />
-                              <circle cx="16" cy="9.2" r="1.8" stroke="currentColor" strokeWidth="1.7" />
-                              <path d="M4.8 17c.7-2.3 2.2-3.4 4.2-3.4s3.5 1.1 4.2 3.4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                            </svg>
-                          )}
+            {/* Eligibility */}
+            <section id="eligibility" className="scroll-mt-28">
+              <div className="rounded-2xl border bg-white p-6" style={{ borderColor: C.border }}>
+                <SectionHeading>Eligibility Criteria</SectionHeading>
+                {eligLines.length ? (
+                  <ul className="mt-5 space-y-3">
+                    {eligLines.map((line, i) => (
+                      <li key={i} className="flex items-start gap-3 text-[14px]" style={{ color: C.muted }}>
+                        <span
+                          className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                          style={{ background: C.primary, color: "white" }}
+                        >
+                          <svg {...SvgProps} className="h-3 w-3">
+                            <path d="m5 12 4 4 7-8" />
+                          </svg>
                         </span>
-                        <span className="min-w-0 pt-1.5">{item.label}</span>
+                        {line}
                       </li>
                     ))}
                   </ul>
+                ) : (
+                  <p className="mt-4 text-[14px]" style={{ color: C.muted }}>
+                    {eligText || "Eligibility details will be listed here."}
+                  </p>
+                )}
+              </div>
+            </section>
+
+            {/* Admission Process */}
+            <section>
+              <div className="rounded-2xl border bg-white p-6" style={{ borderColor: C.border }}>
+                <SectionHeading>Admission Process</SectionHeading>
+                <div className="mt-6 grid gap-3 sm:grid-cols-5">
+                  {ADMISSION_STEPS.map((step, idx) => (
+                    <div key={step.num} className="flex flex-col items-center text-center">
+                      <div className="flex items-center gap-0 sm:w-full sm:flex-row">
+                        <div
+                          className="relative inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl"
+                          style={{ background: C.primary, color: "white" }}
+                        >
+                          <Ico d={step.icon} className="h-6 w-6" />
+                          <span
+                            className="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-extrabold text-white"
+                            style={{ background: C.dark }}
+                          >
+                            {step.num}
+                          </span>
+                        </div>
+                        {idx < ADMISSION_STEPS.length - 1 && (
+                          <span className="hidden h-px flex-1 sm:block" style={{ background: C.border }} />
+                        )}
+                      </div>
+                      <p className="mt-2.5 text-[12px] font-semibold leading-tight" style={{ color: C.text }}>
+                        {step.label}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </aside>
-          </div>
-        </div>
-      </section>
+            </section>
 
-      {specializations.length > 0 ? (
-        <section id="specializations" className="scroll-mt-28 bg-white  py-10 lg:py-12">
-          <div className="era-shell">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="max-w-2xl">
-                <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#430f74] to-[#5B1A91] px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_8px_20px_rgba(67,15,116,0.25)]">
-                  <SparkleIcon />
-                  Specializations
-                </span>
-                <h2 className="mt-4 text-2xl font-extrabold tracking-[-0.03em] text-[#111827] sm:text-[2rem] sm:leading-tight">
-                  Choose Your Specialization in{" "}
-                  <span className="bg-gradient-to-r from-[#430f74] to-[#7c3aed] bg-clip-text text-transparent">
-                    {breadcrumbLabel}
-                  </span>
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-[#64748B] sm:text-base">
-                  Explore specializations designed to match your interests and career goals.
-                </p>
-              </div>
-              <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full border border-[#E4D5F5] bg-white px-4 py-2 text-sm font-semibold text-[#111827] shadow-sm">
-                <span className="h-2 w-2 rounded-full bg-[#10B981]" aria-hidden />
-                {specializations.length}{" "}
-                {specializations.length === 1 ? "Specialization" : "Specializations"} available
-              </span>
-            </div>
+            {/* Curriculum */}
+            {course.tables.length > 0 && (
+              <section className="rounded-2xl border bg-white p-6" style={{ borderColor: C.border }}>
+                <CurriculumSection tables={course.tables} />
+              </section>
+            )}
 
-            <div className="mt-6 grid w-full max-w-[800px] grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {specializations.map((spec, index) => {
-                const detailHref = `/courses/${encodeURIComponent(course.slug || course.id)}/${encodeURIComponent(
-                  spec.slug || spec.uuid
-                )}`;
-                // const description =
-                //   stripTags(spec.description)
-                //   || `Build a strong foundation in ${breadcrumbLabel} and develop versatile skills for multiple career opportunities.`;
-                return (
-                  <article
-                    key={spec.slug}
-                    className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-[#E4D5F5] bg-gradient-to-br from-white via-white to-[#F5EEFC] p-4 shadow-[0_10px_28px_rgba(67,15,116,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(67,15,116,0.14)]"
-                  >
-                    <span
-                      className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-gradient-to-br from-[#430f74] to-[#7c3aed] opacity-90"
-                      aria-hidden
-                    />
+            {/* Additional content paragraphs */}
+            {contentParas.map((para) => (
+              <section key={para.id} className="rounded-2xl border bg-white p-6" style={{ borderColor: C.border }}>
+                <SectionHeading>{para.title}</SectionHeading>
+                <div className="mt-4 text-[15px] leading-7" style={{ color: C.muted }}>
+                  {parseRichLines(para.content).map((l, i) => <p key={i} className="mb-3">{l}</p>)}
+                </div>
+              </section>
+            ))}
 
-                    <div className="relative flex items-start justify-between gap-2">
-                      {spec.shortName ? (
-                        <span className="inline-flex rounded-full bg-[#F5EEFC] px-2.5 py-0.5 text-[11px] font-bold tracking-wide text-[#430f74] ring-1 ring-[#E4D5F5]">
-                          {spec.shortName}
-                        </span>
-                      ) : <span />}
-                      {index === 0 ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-0.5 text-[11px] font-semibold text-[#430f74] shadow-sm ring-1 ring-[#E4D5F5]">
-                          <FlameIcon />
-                          Most Popular
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <h3 className="relative mt-3 max-w-[85%] break-words text-base font-extrabold sm:text-lg leading-snug tracking-[-0.02em] text-[#111827]">
-                      {spec.name}
-                    </h3>
-                    {/* <p className="relative mt-1.5 line-clamp-2 text-[13px] leading-5 text-[#64748B]">
-                      {description}
-                    </p> */}
-
-                    <div className="relative mb-4 mt-3 flex flex-wrap gap-1.5 text-xs font-medium text-[#111827]">
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E4D5F5] bg-white px-2.5 py-1">
-                        <CalendarIcon />
-                        {duration}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E4D5F5] bg-white px-2.5 py-1">
-                        <WifiIcon />
-                        {modeBadge}
-                      </span>
-                    </div>
-
-                    
-
-                    <Link
-                      href={detailHref}
-                      aria-label={`View more about ${spec.name}`}
-                      className="relative mt-auto inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#430f74] to-[#5B1A91] px-4 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(67,15,116,0.25)] transition duration-200 hover:-translate-y-0.5 hover:from-[#5B1A91] hover:to-[#6d28d9] hover:shadow-[0_12px_26px_rgba(67,15,116,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#430f74] focus-visible:ring-offset-2"
-                    >
-                      View More
-                      <span aria-hidden>→</span>
-                    </Link>
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      {/* Paragraphs: title + content only */}
-      {course.paragraphs?.length > 0 ? (
-        <section className="bg-white py-12 lg:py-16">
-          <div className="era-shell space-y-12 lg:space-y-14">
-            {course.paragraphs
-              .filter((p) => !/about/i.test(p.title || ""))
-              .map((paragraph) => {
-                const title = paragraph.title || "";
-                const sectionId = /key feature|feature/i.test(title)
-                  ? "features"
-                  : /eligib/i.test(title)
-                    ? "eligibility"
-                    : /career/i.test(title)
-                      ? "careers"
-                      : undefined;
-
-                return (
-                  <article
-                    key={paragraph.id}
-                    id={sectionId}
-                    className={sectionId ? "scroll-mt-28" : undefined}
-                  >
-                    <h2 className="text-2xl font-extrabold tracking-[-0.03em] text-[#12263f] sm:text-[1.85rem]">
-                      {paragraph.title}
-                    </h2>
-                    <div className="mt-4 max-w-4xl">
-                      <ContentRenderer content={paragraph.content} />
-                    </div>
-                  </article>
-                );
-              })}
-          </div>
-        </section>
-      ) : null}
-
-
-      {/* Content tables: Key Features | Details columns */}
-      {course.tables?.length > 0 ? (
-        <section className="bg-[#f7f9fc] py-12 lg:py-16">
-          <div className="era-shell space-y-10">
-            {course.tables.map((table, tableIndex) => {
-              const rows = [...(table.rows || [])].sort(
-                (a, b) => (a.sort_order || 0) - (b.sort_order || 0)
-              );
-              if (!rows.length) return null;
-
-              const columns = getTableColumns(rows);
-              const sectionId =
-                tableIndex === 0
-                  ? "overview"
-                  : /curriculum|semester|syllabus/i.test(table.title || "")
-                    ? "curriculum"
-                    : undefined;
-
-              return (
-                <div
-                  key={table.id}
-                  id={sectionId}
-                  className={sectionId ? "scroll-mt-28" : undefined}
-                >
-                  <h2 className="text-2xl font-extrabold tracking-[-0.03em] text-[#12263f] sm:text-[1.85rem]">
-                    {table.title}
-                  </h2>
-
-                  <div className="mt-5 overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-[0_10px_30px_rgba(18,38,63,0.04)]">
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full text-sm">
-                        <thead>
-                          <tr className="bg-[#f3f7fb] text-left">
-                            {columns.map((column) => (
-                              <th
-                                key={column}
-                                className="px-4 py-3.5 font-bold text-[#12263f] sm:px-5"
-                              >
-                                {column}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {rows.map((row, index) => (
-                            <tr
-                              key={row.id}
-                              className={
-                                index % 2 === 1 ? "bg-[#f3f7fb]" : "bg-white"
-                              }
-                            >
-                              {columns.map((column, colIndex) => {
-                                const value = cellValue(row, column);
-                                const isLabelCol =
-                                  colIndex === 0 || /key\s*feature/i.test(column);
-
-                                return (
-                                  <td
-                                    key={column}
-                                    className={`px-4 py-3.5 sm:px-5 ${
-                                      isLabelCol
-                                        ? "font-semibold text-[#12263f]"
-                                        : "text-slate-600"
-                                    }`}
-                                  >
-                                    {isLabelCol ? (
-                                      <span className="inline-flex items-center gap-2.5">
-                                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#e8eef6]">
-                                          <OverviewRowIcon
-                                            label={row.label || value}
-                                          />
-                                        </span>
-                                        {value}
-                                      </span>
-                                    ) : (
-                                      value
-                                    )}
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+            {/* FAQs */}
+            {activeFaqs.length > 0 && (
+              <section id="faqs" className="scroll-mt-28">
+                <div className="rounded-2xl border bg-white p-6" style={{ borderColor: C.border }}>
+                  <SectionHeading>Frequently Asked Questions</SectionHeading>
+                  <div className="mt-5">
+                    <BurgundyFAQ faqs={activeFaqs} />
                   </div>
                 </div>
-              );
-            })}
+              </section>
+            )}
+
           </div>
-        </section>
-      ) : null}
-      {/* FAQs */}
-      {activeFaqs.length > 0 ? (
-        <section id="faqs" className="scroll-mt-28 bg-[#f7f9fc] py-12 lg:py-16">
-          <div className="era-shell grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12">
-            <aside className="lg:sticky lg:top-24 lg:self-start">
-              <span className="inline-flex rounded-full bg-[#e8eef6] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#2f6fed]">
-                Got Questions?
-              </span>
-              <h2 className="mt-3 text-2xl font-extrabold tracking-[-0.03em] text-[#12263f] sm:text-[1.85rem]">
-                Frequently Asked Questions
-              </h2>
-              <p className="mt-3 text-[15px] leading-7 text-slate-600">
-                Clear answers about admissions, eligibility, fees and career outcomes for {breadcrumbLabel}.
-              </p>
 
-              <div className="mt-6 flex items-center gap-3 rounded-2xl border border-[#e2e8f0] bg-white p-4">
-                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eaf2ff] text-lg font-extrabold text-[#2563eb]">
-                  {activeFaqs.length}
-                </span>
-                <p className="text-sm leading-5 text-slate-600">
-                  <span className="block font-bold text-[#12263f]">Answered questions</span>
-                  Curated by our admission experts
-                </p>
-              </div>
+          {/* ════════ RIGHT SIDEBAR ════════ */}
+          <aside className="space-y-5 lg:sticky lg:top-20 lg:self-start">
+            <AdmissionForm courseName={course.name} />
+            <CourseHighlights course={course} duration={duration} feeLabel={feeLabel} />
+            {careerRoles.length > 0 && (
+              <section id="careers" className="scroll-mt-28">
+                <CareerSidebar roles={careerRoles} />
+              </section>
+            )}
+          </aside>
 
-              <div className="mt-4 rounded-2xl bg-[#12263f] p-5 text-white shadow-[0_10px_30px_rgba(18,38,63,0.15)]">
-                <h3 className="text-base font-extrabold">Still have questions?</h3>
-                <p className="mt-1 text-sm leading-6 text-slate-300">
-                  Talk to a counsellor for personalised guidance — it&apos;s free.
-                </p>
-                <Link
-                  href="/tools/course-finder"
-                  className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-bold text-[#12263f] transition hover:bg-slate-100"
-                >
-                  Talk to an Expert
-                  <span aria-hidden>→</span>
-                </Link>
-              </div>
-            </aside>
+        </div>
+      </div>
 
-            <div>
-              <FAQAccordion faqs={showAllFaqs ? activeFaqs : activeFaqs.slice(0, 5)} />
-              {activeFaqs.length > 5 ? (
-                <div className="mt-5 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => setShowAllFaqs((prev) => !prev)}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#c9d2de] bg-white px-6 text-sm font-bold text-[#12263f] transition hover:border-[#12263f]"
-                  >
-                    {showAllFaqs
-                      ? "Show fewer questions"
-                      : `View all ${activeFaqs.length} questions`}
-                    <svg
-                      viewBox="0 0 24 24"
-                      className={`h-4 w-4 transition-transform ${showAllFaqs ? "rotate-180" : ""}`}
-                      fill="none"
-                      aria-hidden
-                    >
-                      <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
-                </div>
-              ) : null}
+      {/* ── Bottom CTA ── */}
+      <section
+        className="relative overflow-hidden py-14 text-white"
+        style={{ background: `linear-gradient(135deg, ${C.dark} 0%, ${C.primary} 60%, #c0244f 100%)` }}
+      >
+        <div className="pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full opacity-10" style={{ background: "white" }} aria-hidden />
+        <div className="pointer-events-none absolute -bottom-10 right-0 h-40 w-40 rounded-full opacity-10" style={{ background: "white" }} aria-hidden />
+        <div className="era-shell relative flex flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
+          <div>
+            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 mb-3">
+              <Ico d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.627 48.627 0 0 1 12 20.904a48.627 48.627 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.57 50.57 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" className="h-7 w-7 text-white" />
             </div>
+            <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+              Ready to Start Your {shortLabel(course)} Journey?
+            </h2>
+            <p className="mt-2 max-w-xl text-white/80">
+              Get expert guidance, compare universities and apply for your {shortLabel(course)} today!
+            </p>
           </div>
-        </section>
-      ) : null}
-
-      {/* Bottom CTA */}
-      <section className="bg-white py-12 lg:py-16">
-        <div className="era-shell">
-          <div className="relative overflow-hidden rounded-[24px] border border-[#e2e8f0] bg-[#eaf2ff] px-7 py-12 sm:px-12 lg:px-16 lg:py-14">
-            <div
-              className="pointer-events-none absolute inset-0 opacity-[0.35]"
-              style={{
-                backgroundImage:
-                  "repeating-linear-gradient(-45deg, transparent, transparent 18px, rgba(47,111,237,0.08) 18px, rgba(47,111,237,0.08) 19px)",
-              }}
-              aria-hidden
-            />
-            <div className="relative grid items-center gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-              <div>
-                <h2 className="max-w-xl text-2xl font-extrabold tracking-[-0.03em] text-[#12263f] sm:text-[2rem]">
-                  Start Your Journey Towards a Successful Career
-                </h2>
-                <p className="mt-3 max-w-lg text-[15px] leading-7 text-slate-600">
-                  Get free counselling, compare universities, and apply to {breadcrumbLabel} with expert support.
-                </p>
-                <div className="mt-7 flex flex-wrap gap-3">
-                  <Link
-                    href="/tools/course-finder"
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#12263f] px-6 text-sm font-bold text-white transition hover:bg-[#1a3354]"
-                  >
-                    Apply Now
-                    <span aria-hidden>→</span>
-                  </Link>
-                  <Link
-                    href="/tools/course-finder"
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#c9d2de] bg-white px-6 text-sm font-bold text-[#12263f] transition hover:border-[#12263f]"
-                  >
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
-                      <path d="M5 10v2a7 7 0 0 0 14 0v-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                      <path d="M8 10V8a4 4 0 0 1 8 0v2" stroke="currentColor" strokeWidth="1.8" />
-                      <path d="M4 11h2v3H4zM18 11h2v3h-2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-                    </svg>
-                    Talk to an Expert
-                  </Link>
-                </div>
-              </div>
-              <div className="relative mx-auto hidden h-44 w-full max-w-xs lg:block">
-                <div className="absolute inset-0 overflow-hidden rounded-[1.5rem] border border-[#e2e8f0] bg-white">
-                  <Image
-                    src="/hero/slide-1.png"
-                    alt=""
-                    fill
-                    className="object-cover"
-                    sizes="240px"
-                  />
-                </div>
-                <p
-                  className="pointer-events-none absolute -right-2 bottom-3 text-sm font-medium text-[#64748b]"
-                  style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-                  aria-hidden
-                >
-                  Your Future Awaits
-                </p>
-              </div>
-            </div>
-          </div>
+          <Link
+            href="/tools/course-finder"
+            className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-8 text-sm font-extrabold transition hover:-translate-y-0.5 hover:shadow-lg"
+            style={{ color: C.primary }}
+          >
+            Apply Now →
+          </Link>
         </div>
       </section>
     </main>

@@ -479,7 +479,7 @@ export function BlogDetails({
             )}
 
             {/* Fallback when no content at all */}
-            {!hasArticleBody && !displayExcerpt && (
+            {!hasArticleBody && !displayExcerpt ? (
               <p className="mt-6 text-base leading-relaxed text-slate-500 italic">
                 This article is currently being prepared. Check back shortly for
                 the full content.
@@ -571,7 +571,7 @@ export function BlogDetails({
                   </p>
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* Share buttons */}
             <div className="mt-6 flex flex-wrap items-center gap-2 sm:mt-8">
@@ -720,7 +720,7 @@ export function BlogDetails({
                 </ul>
               </div>
             ) : null}
-          </aside>
+          </article>
         </div>
       </div>
     </div>

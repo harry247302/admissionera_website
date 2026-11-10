@@ -4,7 +4,7 @@ import {
   resolveMediaUrl,
   type DiscoveryUniversity,
 } from "@/lib/universities";
-import { fetchCourseById, type CourseFaq } from "@/lib/courseDiscovery";
+import { type CourseContentParagraph, type CourseFaq, type CourseSpecialization } from "@/lib/courseDiscovery";
 
 const ACADEMIC_API_URL = "https://backend.admissionera.com/api/academic";
 
@@ -37,6 +37,7 @@ export type UniversityCourse = {
   uuid: string;
   name: string;
   code: string;
+  slug: string;
   level: string;
   levelGroup: "UG" | "PG" | "Diploma" | "Certificate" | "Other";
   mode: string;
@@ -46,6 +47,8 @@ export type UniversityCourse = {
   totalFee: number | null;
   currency: string;
   feeNote: string;
+  paragraphs: CourseContentParagraph[];
+  specializations: CourseSpecialization[];
 };
 
 export type UniversityDetail = {
@@ -70,6 +73,7 @@ export type UniversityDetail = {
   approvals: UniversityApproval[];
   faqs: CourseFaq[];
   courses: UniversityCourse[];
+  paragraphs: CourseContentParagraph[];
   similar: DiscoveryUniversity[];
 };
 
@@ -285,35 +289,6 @@ export async function fetchUniversityDetail(uuid: string): Promise<UniversityDet
   const career = parseRichHtml(row.career);
   const listEntry = allUniversities.find((uni) => uni.uuid === row.uuid);
 
-  const apiCourses = (Array.isArray(row.courses) ? row.courses : []) as ApiUniversityCourse[];
-  const courseDetails = await Promise.allSettled(
-    apiCourses.map((course) => (course.uuid ? fetchCourseById(course.uuid) : Promise.reject()))
-  );
-
-  const courses: UniversityCourse[] = apiCourses
-    .filter((course) => course.uuid)
-    .map((course, index) => {
-      const settled = courseDetails[index];
-      const detail = settled?.status === "fulfilled" ? settled.value : null;
-      const fees = summariseFees(course.fees);
-      const level = detail?.level || "";
-      return {
-        uuid: String(course.uuid),
-        name: course.name || detail?.name || "Course",
-        code: detail?.code || "",
-        level: levelLabel(level),
-        levelGroup: levelGroup(level),
-        mode: titleCase(detail?.studyMode || detail?.attendanceMode || "") || "—",
-        duration: tableSnapshot(detail?.tables, /duration/i) || "—",
-        eligibility:
-          tableSnapshot(detail?.tables, /eligib/i) || detail?.eligibility || "—",
-        language: detail?.language || "",
-        totalFee: fees.total,
-        currency: fees.currency,
-        feeNote: fees.note,
-      };
-    });
-
   const approvals: UniversityApproval[] = (approvalsPayload?.data || [])
     .filter((item) => item && item.is_active !== false)
     .sort((a, b) => Number(a.display_order || 0) - Number(b.display_order || 0))
@@ -359,7 +334,30 @@ export async function fetchUniversityDetail(uuid: string): Promise<UniversityDet
     recruiters: extractRecruiters(career),
     approvals,
     faqs,
-    courses,
+    courses: [],
+    paragraphs: [],
     similar: allUniversities.filter((uni) => uni.uuid !== row.uuid).slice(0, 4),
   };
+}
+
+function mergeCourseParagraphs(courses: UniversityCourse[]) {
+  const seen = new Set<string>();
+  const paragraphs: CourseContentParagraph[] = [];
+  for (const course of courses) {
+    for (const paragraph of course.paragraphs || []) {
+      const title = String(paragraph.title || "").trim();
+      const content = String(paragraph.content || "").trim();
+      if (!title && !content) continue;
+      const key = paragraph.id || `${title}:${paragraph.sort_order}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      paragraphs.push({
+        id: String(paragraph.id || key),
+        title,
+        content,
+        sort_order: Number(paragraph.sort_order) || 0,
+      });
+    }
+  }
+  return paragraphs.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 }
