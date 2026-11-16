@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -9,38 +9,62 @@ import {
   BookOpen,
   Briefcase,
   Building2,
+  Calendar,
   Check,
+  ChevronDown,
   ClipboardCheck,
+  Download,
   GraduationCap,
   Headset,
+  Laptop,
   MapPin,
-  Star,
+  Phone,
+  User,
+  Users,
 } from "lucide-react";
-import type { CourseFaq } from "@/lib/courseDiscovery";
-import type { RichBlock, RichSection, UniversityDetail } from "@/lib/universityDetail";
+import type { Blog } from "@/lib/blogs";
+import { formatBlogDate, resolveBlogImageUrl } from "@/lib/blogs";
+import type { CourseContentParagraph, CourseContentTable, CourseFaq, DiscoveryCourse } from "@/lib/courseDiscovery";
+import { parseRichHtml, type RichBlock, type UniversityCourse, type UniversityDetail } from "@/lib/universityDetail";
+import type { DiscoveryUniversity } from "@/lib/universities";
 
 const C = {
-  primary: "#6B21A8",
-  dark: "#35066F",
-  accent: "#F20D70",
-  magenta: "#C026D3",
-  light: "#FAF7FF",
-  border: "#EDE4F5",
-  text: "#17134A",
-  muted: "#6B6578",
+  primary: "#5412A5",
+  secondary: "#7022AD",
+  magenta: "#D414A8",
+  lavender: "#F7F1FC",
+  page: "#FAF9FC",
+  text: "#242033",
+  muted: "#686477",
+  border: "#EAE2F2",
 };
 
 const APPLY_HREF = "/tools/course-finder";
-const HERO_FALLBACK = `linear-gradient(118deg, ${C.dark} 0%, ${C.primary} 42%, ${C.magenta} 72%, ${C.accent} 100%)`;
+const HERO_FALLBACK = `linear-gradient(118deg, #3A0B78 0%, ${C.primary} 48%, ${C.magenta} 100%)`;
 
-type NavTab = {
-  id: string;
-  label: string;
-  Icon: typeof BookOpen;
+const APPROVAL_BLURB: Record<string, string> = {
+  AIU: "Association of Indian Universities",
+  AICTE: "All India Council for Technical Education",
+  NAAC: "National Assessment and Accreditation Council",
+  "NAAC A++": "National Assessment and Accreditation Council",
+  "NAAC A+": "National Assessment and Accreditation Council",
+  NIRF: "National Institutional Ranking Framework",
+  UGC: "University Grants Commission",
+  DEB: "Distance Education Bureau",
 };
 
-function hasSection(section: RichSection) {
-  return Boolean(section.title || section.blocks.length);
+type NavTab = { id: string; label: string };
+
+function stripPreview(html = "") {
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function findParagraph(paragraphs: CourseContentParagraph[], matcher: RegExp) {
+  return paragraphs.find((item) => matcher.test(item.title || ""));
 }
 
 function RichContent({ blocks }: { blocks: RichBlock[] }) {
@@ -49,10 +73,10 @@ function RichContent({ blocks }: { blocks: RichBlock[] }) {
   const others = blocks.filter((block) => block.type !== "li");
 
   return (
-    <div className="space-y-3 text-[14.5px] leading-7 text-[#6B6578]">
+    <div className="space-y-3 text-[14.5px] leading-7 text-[#686477]">
       {others.map((block, index) =>
         block.type === "heading" ? (
-          <h3 key={`${block.text}-${index}`} className="pt-1 text-[16px] font-extrabold text-[#17134A]">
+          <h3 key={`${block.text}-${index}`} className="pt-1 text-[15px] font-extrabold text-[#242033]">
             {block.text}
           </h3>
         ) : (
@@ -63,7 +87,7 @@ function RichContent({ blocks }: { blocks: RichBlock[] }) {
         <ul className="space-y-2">
           {listItems.map((block, index) => (
             <li key={`${block.text.slice(0, 40)}-${index}`} className="flex items-start gap-2.5">
-              <Check className="mt-1 h-4 w-4 shrink-0 text-[#F20D70]" />
+              <Check className="mt-1 h-4 w-4 shrink-0 text-[#5412A5]" />
               <span>{block.text}</span>
             </li>
           ))}
@@ -73,166 +97,158 @@ function RichContent({ blocks }: { blocks: RichBlock[] }) {
   );
 }
 
+function ParagraphBody({ content }: { content: string }) {
+  const parsed = parseRichHtml(content);
+  const blocks = parsed.blocks.length ? parsed.blocks : parsed.title ? [{ type: "p" as const, text: parsed.title }] : [];
+  return <RichContent blocks={blocks} />;
+}
+
+function ReadMoreText({ content, limit = 420 }: { content: string; limit?: number }) {
+  const [open, setOpen] = useState(false);
+  const preview = stripPreview(content);
+  const needsToggle = preview.length > limit;
+  if (!needsToggle || open) {
+    return (
+      <div>
+        <ParagraphBody content={content} />
+        {needsToggle ? (
+          <button type="button" onClick={() => setOpen(false)} className="mt-3 text-sm font-bold text-[#5412A5]">
+            Read Less
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+  return (
+    <div>
+      <p className="text-[14.5px] leading-7 text-[#686477]">{preview.slice(0, limit).trim()}…</p>
+      <button type="button" onClick={() => setOpen(true)} className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-[#5412A5]">
+        Read More <ChevronDown className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 function SectionHeading({ children }: { children: ReactNode }) {
   return (
-    <h2 className="flex items-center gap-3 text-[1.15rem] font-extrabold tracking-tight text-[#17134A] sm:text-2xl">
-      <span
-        className="inline-block h-6 w-1 shrink-0 rounded-full"
-        style={{ background: `linear-gradient(180deg, ${C.primary}, ${C.accent})` }}
-        aria-hidden
-      />
+    <h2 className="flex items-center gap-3 text-[1.2rem] font-extrabold tracking-tight text-[#242033] sm:text-[1.45rem]">
+      <span className="inline-block h-6 w-1 shrink-0 rounded-full bg-gradient-to-b from-[#5412A5] to-[#D414A8]" aria-hidden />
       {children}
     </h2>
   );
 }
 
-function WhiteCard({
-  children,
-  className = "",
-  id,
-}: {
-  children: ReactNode;
-  className?: string;
-  id?: string;
-}) {
-  return (
-    <section
-      id={id}
-      className={`scroll-mt-28 rounded-2xl border border-[#EDE4F5] bg-white p-4 shadow-[0_8px_24px_rgba(53,6,111,0.06)] sm:p-6 ${className}`}
-    >
-      {children}
-    </section>
-  );
-}
-
 function UniversityHero({ university, lead }: { university: UniversityDetail; lead: string }) {
   const banner = university.banner;
-  const stats = [
-    university.location ? { label: "Location", value: university.location, Icon: MapPin } : null,
-    university.established ? { label: "Established", value: university.established, Icon: Building2 } : null,
-    university.grade ? { label: "Grade", value: university.grade, Icon: Award } : null,
-    university.ratings != null ? { label: "Rating", value: `${university.ratings.toFixed(1)}/5`, Icon: Star } : null,
-    university.state ? { label: "State", value: university.state, Icon: MapPin } : null,
-  ].filter(Boolean) as { label: string; value: string; Icon: typeof MapPin }[];
+  const brochureHref = university.website || APPLY_HREF;
 
   return (
-    <section className="relative bg-[#1a1224] text-white">
-      <div className="relative min-h-[380px] overflow-hidden sm:min-h-[440px] lg:min-h-[480px]">
+    <section className="relative overflow-hidden text-white">
+      <div className="absolute inset-0" aria-hidden>
         {banner ? (
-          <Image
-            src={banner}
-            alt={`${university.name} campus`}
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-center"
-            unoptimized
-          />
-        ) : (
-          <div className="absolute inset-0" style={{ background: HERO_FALLBACK }} />
-        )}
+          <Image src={banner} alt="" fill priority sizes="100vw" className="object-cover object-[center_30%]" unoptimized />
+        ) : null}
         <div
           className="absolute inset-0"
           style={{
-            background:
-              "linear-gradient(90deg, rgba(18,12,28,0.88) 0%, rgba(18,12,28,0.62) 42%, rgba(18,12,28,0.18) 72%, rgba(18,12,28,0.08) 100%)",
+            background: banner
+              ? "linear-gradient(100deg, rgba(58,11,120,0.92) 0%, rgba(84,18,165,0.78) 46%, rgba(212,20,168,0.28) 100%)"
+              : HERO_FALLBACK,
           }}
-          aria-hidden
         />
+      </div>
 
-        <div className="era-shell relative flex min-h-[380px] flex-col justify-center pb-24 pt-10 sm:min-h-[440px] sm:pb-28 lg:min-h-[480px] lg:pb-32">
-          <div className="max-w-xl">
-            {university.shortName ? (
-              <span className="inline-flex rounded-full bg-white/15 px-3 py-1 text-[12px] font-bold tracking-wide text-white backdrop-blur-sm">
-                {university.shortName}
-              </span>
-            ) : null}
+      <div className="era-shell relative py-8 sm:py-10 lg:py-12">
+        <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-[12px] text-white/70" aria-label="Breadcrumb">
+          <Link href="/" className="hover:text-white">Home</Link>
+          <span aria-hidden>/</span>
+          <Link href="/universities" className="hover:text-white">Universities</Link>
+          <span aria-hidden>/</span>
+          <span className="font-semibold text-white">{university.name}</span>
+        </nav>
 
-            <h1 className="mt-4 text-[2rem] font-extrabold leading-[1.08] tracking-[-0.03em] sm:text-[2.75rem] lg:text-[3.1rem]">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+          {university.logo ? (
+            <div className="inline-flex h-[84px] w-[84px] shrink-0 overflow-hidden rounded-2xl bg-white p-1.5 shadow-lg sm:h-[96px] sm:w-[96px]">
+              <Image src={university.logo} alt={`${university.name} logo`} width={96} height={96} className="h-full w-full object-contain" unoptimized />
+            </div>
+          ) : null}
+          <div className="min-w-0">
+            <h1 className="text-[1.7rem] font-extrabold leading-[1.12] tracking-[-0.03em] sm:text-[2.35rem]">
               {university.name}
             </h1>
-
-            {lead ? (
-              <p className="mt-4 max-w-lg text-[14px] leading-7 text-white/85 sm:text-[15px]">{lead}</p>
-            ) : null}
-
-            <div className="mt-5 flex flex-wrap items-center gap-2">
-              {university.ratings != null ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-[12px] font-semibold backdrop-blur-sm">
-                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                  {university.ratings.toFixed(1)} Rating
+            {lead ? <p className="mt-2 max-w-2xl text-[14px] leading-6 text-white/85 sm:text-[15px]">{lead}</p> : null}
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-[13px] text-white/90">
+              {university.location ? (
+                <span className="inline-flex max-w-xl items-start gap-1.5">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{university.location}</span>
                 </span>
               ) : null}
               {university.grade ? (
-                <span className="inline-flex items-center rounded-full bg-white/12 px-3 py-1.5 text-[12px] font-semibold backdrop-blur-sm">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 py-1 font-semibold backdrop-blur-sm">
+                  <Award className="h-3.5 w-3.5" />
                   Grade {university.grade}
                 </span>
               ) : null}
-              {university.established ? (
-                <span className="inline-flex items-center rounded-full bg-white/12 px-3 py-1.5 text-[12px] font-semibold backdrop-blur-sm">
-                  Est. {university.established}
-                </span>
-              ) : null}
-              {university.worldRank != null ? (
-                <span className="inline-flex items-center rounded-full bg-white/12 px-3 py-1.5 text-[12px] font-semibold backdrop-blur-sm">
-                  Rank #{university.worldRank}
-                </span>
-              ) : null}
             </div>
-
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Link
                 href={APPLY_HREF}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#7A1848] px-6 text-sm font-bold text-white shadow-[0_10px_24px_rgba(122,24,72,0.35)] transition hover:bg-[#64133b]"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#D414A8] px-6 text-sm font-bold text-white shadow-[0_10px_24px_rgba(212,20,168,0.28)] transition hover:bg-[#b91090]"
               >
                 Apply Now
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                href={APPLY_HREF}
-                className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/70 bg-white/10 px-6 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white/20"
+                href={brochureHref}
+                target={university.website ? "_blank" : undefined}
+                rel={university.website ? "noreferrer" : undefined}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/70 bg-white/10 px-6 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white/20"
               >
-                Get Counselling
+                <Download className="h-4 w-4" />
+                Download Brochure
               </Link>
             </div>
           </div>
         </div>
       </div>
-
-      {stats.length ? (
-        <div className="era-shell relative z-10 -mt-12 sm:-mt-14">
-          <div className="grid grid-cols-2 gap-4 rounded-[1.5rem] bg-white px-4 py-4 shadow-[0_16px_40px_rgba(23,18,37,0.12)] sm:grid-cols-3 sm:px-6 lg:grid-cols-5">
-            {stats.map((stat) => (
-              <div key={stat.label} className="flex items-start gap-3">
-                <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FAF7FF] text-[#7A1848]">
-                  <stat.Icon className="h-4 w-4" />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[12px] font-bold text-[#17134A]">{stat.label}</p>
-                  <p className="mt-0.5 text-[13px] leading-5 text-[#6B6578]">{stat.value}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
     </section>
+  );
+}
+
+function HighlightStrip({ items }: { items: { title: string; subtitle: string; Icon: typeof GraduationCap }[] }) {
+  if (!items.length) return null;
+  return (
+    <div className="era-shell relative z-10 -mt-7">
+      <div className="grid grid-cols-2 gap-3 rounded-[1.4rem] border border-[#EAE2F2] bg-white p-3 shadow-[0_16px_40px_rgba(84,18,165,0.08)] sm:grid-cols-2 lg:grid-cols-4 lg:px-4">
+        {items.map((item) => (
+          <div key={item.title} className="flex items-center gap-3 rounded-xl px-2 py-2">
+            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F7F1FC] text-[#5412A5]">
+              <item.Icon className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[13px] font-extrabold leading-tight text-[#242033]">{item.title}</p>
+              <p className="mt-0.5 text-[12px] text-[#686477]">{item.subtitle}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
 function UniversityNavigation({ activeSection, tabs }: { activeSection: string; tabs: NavTab[] }) {
   if (!tabs.length) return null;
-
   return (
     <nav
-      className="sticky top-[64px] z-30 w-full border-b border-[#EDE4F5] bg-white/95 shadow-sm backdrop-blur-md sm:top-[72px] lg:top-[78px]"
+      className="sticky top-[64px] z-30 mt-6 border-b border-[#EAE2F2] bg-white/95 backdrop-blur-md sm:top-[72px] lg:top-[78px]"
       aria-label="University sections"
     >
       <div className="era-shell">
-        <div className="-mx-1 flex snap-x snap-mandatory gap-0 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="-mx-1 flex overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tabs.map((tab) => {
             const active = activeSection === tab.id;
-            const Icon = tab.Icon;
             return (
               <a
                 key={tab.id}
@@ -241,13 +257,12 @@ function UniversityNavigation({ activeSection, tabs }: { activeSection: string; 
                   event.preventDefault();
                   document.getElementById(tab.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
-                className={`relative flex snap-start shrink-0 items-center gap-2 px-3 py-3 text-[13px] font-semibold transition sm:px-5 sm:py-4 sm:text-sm ${
-                  active ? "bg-[#FAF7FF] text-[#6B21A8]" : "text-[#6B6578] hover:text-[#17134A]"
+                className={`shrink-0 px-4 py-3.5 text-[13px] font-semibold transition sm:px-5 sm:text-sm ${
+                  active ? "text-[#5412A5]" : "text-[#686477] hover:text-[#242033]"
                 }`}
-                style={{ borderBottom: active ? `2px solid ${C.primary}` : "2px solid transparent" }}
+                style={{ borderBottom: active ? "2px solid #5412A5" : "2px solid transparent" }}
               >
-                <Icon className="hidden h-4 w-4 sm:inline" />
-                <span className="whitespace-nowrap">{tab.label}</span>
+                {tab.label}
               </a>
             );
           })}
@@ -257,51 +272,249 @@ function UniversityNavigation({ activeSection, tabs }: { activeSection: string; 
   );
 }
 
-function ApprovalsSection({ university }: { university: UniversityDetail }) {
-  if (!university.approvals.length) return null;
+function EnquiryForm({ university, programmes }: { university: UniversityDetail; programmes: UniversityCourse[] }) {
+  const [form, setForm] = useState({ name: "", phone: "", programme: "" });
+  const [error, setError] = useState("");
+  const [status, setStatus] = useState<"idle" | "success">("idle");
+
+  function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    const name = form.name.trim();
+    const phone = form.phone.replace(/\D/g, "");
+    if (name.length < 2) {
+      setError("Please enter your full name.");
+      return;
+    }
+    if (phone.length !== 10) {
+      setError("Enter a valid 10-digit mobile number.");
+      return;
+    }
+    setError("");
+    const params = new URLSearchParams({
+      name,
+      phone,
+      university: university.name,
+      ...(form.programme ? { course: form.programme } : {}),
+    });
+    window.location.href = `${APPLY_HREF}?${params.toString()}`;
+    setStatus("success");
+  }
 
   return (
-    <WhiteCard id="approvals">
-      <SectionHeading>Approvals & Accreditations</SectionHeading>
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {university.approvals.map((item) => (
-          <article
-            key={item.id}
-            className="flex flex-col items-center rounded-2xl border border-[#EDE4F5] bg-[#FAF7FF] p-4 text-center"
-          >
-            {item.logo ? (
-              <Image src={item.logo} alt={item.name} width={72} height={72} className="h-14 w-14 object-contain" unoptimized />
-            ) : (
-              <Award className="h-10 w-10 text-[#6B21A8]" />
-            )}
-            <p className="mt-3 text-[13px] font-extrabold text-[#17134A]">{item.name}</p>
-            {item.description ? (
-              <p className="mt-1 text-[12px] leading-5 text-[#6B6578]">{item.description}</p>
-            ) : null}
-          </article>
-        ))}
+    <div
+      className="rounded-[1.25rem] p-5 text-white shadow-[0_16px_36px_rgba(84,18,165,0.18)]"
+      style={{ background: `linear-gradient(160deg, ${C.primary} 0%, ${C.secondary} 52%, ${C.magenta} 100%)` }}
+    >
+      <h3 className="text-[17px] font-extrabold">Get Admission Support</h3>
+      <p className="mt-1 text-[13px] leading-5 text-white/80">
+        Speak to our experts for course guidance, eligibility, fees and the admission process.
+      </p>
+      {status === "success" ? (
+        <p className="mt-5 rounded-xl bg-white/15 p-4 text-sm font-semibold">Thank you. We will connect you with a counsellor.</p>
+      ) : (
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3" noValidate>
+          <label className="relative block">
+            <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9B93AE]" />
+            <span className="sr-only">Full Name</span>
+            <input
+              value={form.name}
+              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+              placeholder="Your Name"
+              className="h-11 w-full rounded-xl border-0 bg-white pl-10 pr-3 text-sm text-[#242033] outline-none placeholder:text-[#9B93AE]"
+            />
+          </label>
+          <label className="relative block">
+            <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9B93AE]" />
+            <span className="sr-only">Mobile Number</span>
+            <input
+              value={form.phone}
+              onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
+              placeholder="Mobile Number"
+              inputMode="numeric"
+              className="h-11 w-full rounded-xl border-0 bg-white pl-10 pr-3 text-sm text-[#242033] outline-none placeholder:text-[#9B93AE]"
+            />
+          </label>
+          <label className="relative block">
+            <GraduationCap className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9B93AE]" />
+            <span className="sr-only">Select Programme</span>
+            <select
+              value={form.programme}
+              onChange={(event) => setForm((prev) => ({ ...prev, programme: event.target.value }))}
+              className="h-11 w-full appearance-none rounded-xl border-0 bg-white pl-10 pr-8 text-sm text-[#242033] outline-none"
+            >
+              {/* <option value="">Select Programme</option>
+              {programmes.map((course) => (
+                <option key={course.uuid || course.name} value={course.name}>
+                  {course.name}
+                </option>
+              ))} */}
+              {!programmes.length ? <option value="Counselling">Admission counselling</option> : null}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9B93AE]" />
+          </label>
+          {error ? <p className="text-[12px] font-semibold text-pink-100">{error}</p> : null}
+          <button type="submit" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-white text-sm font-extrabold text-[#5412A5] transition hover:bg-[#F7F1FC]">
+            Request a Call Back
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </form>
+      )}
+      <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-semibold text-white/85">
+        <span>✓ Free Counselling</span>
+        <span>✓ Expert Guidance</span>
+        <span>✓ No Hidden Charges</span>
       </div>
-    </WhiteCard>
+    </div>
   );
 }
 
-function RecruitersSection({ names }: { names: string[] }) {
-  if (!names.length) return null;
+function CompanyMark({ name, logo }: { name: string; logo: string }) {
+  const [failed, setFailed] = useState(false);
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase())
+    .join("");
 
   return (
-    <WhiteCard id="recruiters">
-      <SectionHeading>Top Recruiters</SectionHeading>
-      <div className="mt-5 flex flex-wrap gap-2">
-        {names.map((name) => (
-          <span
-            key={name}
-            className="rounded-full border border-[#EDE4F5] bg-[#FAF7FF] px-3 py-1.5 text-[13px] font-semibold text-[#17134A]"
-          >
-            {name}
-          </span>
-        ))}
+    <span className="flex h-12 w-full items-center justify-center">
+      {logo && !failed ? (
+        <Image
+          src={logo}
+          alt={name}
+          width={120}
+          height={48}
+          className="max-h-10 w-auto object-contain"
+          unoptimized
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-[12px] font-extrabold text-[#5412A5]">
+          {initials || <Building2 className="h-5 w-5" />}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function SidebarCard({ title, href, children }: { title: string; href: string; children: ReactNode }) {
+  return (
+    <section className="rounded-[1.15rem] border border-[#EAE2F2] bg-white p-4 shadow-[0_8px_20px_rgba(84,18,165,0.05)]">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="text-[14px] font-extrabold text-[#242033]">{title}</h3>
+        <Link href={href} className="text-[12px] font-bold text-[#5412A5]">View all</Link>
       </div>
-    </WhiteCard>
+      {children}
+    </section>
+  );
+}
+
+function programmesFromTables(tables: CourseContentTable[]): UniversityCourse[] {
+  return tables.flatMap((table) => {
+    const title = table.title || "";
+    const levelGroup: UniversityCourse["levelGroup"] = /post|pg/i.test(title)
+      ? "PG"
+      : /under|ug/i.test(title)
+        ? "UG"
+        : "Other";
+    return (table.rows || []).map((row) => {
+      const values = Object.values(row.content || {}).map((value) => String(value || "").trim()).filter(Boolean);
+      const name = row.label || values[0] || "Programme";
+      return {
+        uuid: "",
+        name,
+        code: values[1] && values[1] !== name ? values[1] : "",
+        slug: "",
+        level: levelGroup === "UG" ? "Undergraduate" : levelGroup === "PG" ? "Postgraduate" : title,
+        levelGroup,
+        mode: "Online",
+        duration: "",
+        eligibility: "",
+        language: "",
+        totalFee: null,
+        currency: "INR",
+        feeNote: "",
+        paragraphs: [],
+        specializations: [],
+      } satisfies UniversityCourse;
+    });
+  });
+}
+
+function UniversityCourses({ courses, tables }: { courses: UniversityCourse[]; tables: CourseContentTable[] }) {
+  const programmes = useMemo(() => {
+    const fromTables = programmesFromTables(tables);
+    const seen = new Set(courses.map((course) => course.name.trim().toLowerCase()));
+    return [
+      ...courses,
+      ...fromTables.filter((item) => {
+        const key = item.name.trim().toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }),
+    ];
+  }, [courses, tables]);
+  const tabs = useMemo(() => {
+    const groups = Array.from(new Set(programmes.map((course) => course.levelGroup).filter((group) => group !== "Other")));
+    const items: { id: "all" | UniversityCourse["levelGroup"]; label: string }[] = [{ id: "all", label: "All" }];
+    if (groups.includes("UG")) items.push({ id: "UG", label: "Undergraduate (UG)" });
+    if (groups.includes("PG")) items.push({ id: "PG", label: "Postgraduate (PG)" });
+    return items;
+  }, [programmes]);
+  const [tab, setTab] = useState<(typeof tabs)[number]["id"]>("all");
+  const rows = programmes.filter((course) => tab === "all" || course.levelGroup === tab);
+
+  return (
+    <section id="courses" className="scroll-mt-28 rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5 sm:p-6">
+      <SectionHeading>Available UG & PG Online Programmes</SectionHeading>
+      {!programmes.length ? (
+        <p className="mt-5 rounded-xl bg-[#F7F1FC] px-4 py-6 text-center text-sm text-[#686477]">
+          Programmes will be updated soon.
+        </p>
+      ) : (
+        <>
+          {tabs.length > 2 ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {tabs.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setTab(item.id)}
+                  className={`rounded-full px-3 py-1.5 text-[12px] font-bold ${
+                    tab === item.id ? "bg-[#5412A5] text-white" : "bg-[#F7F1FC] text-[#5412A5]"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {rows.map((course, index) => {
+              const href = course.uuid ? `/courses/${course.slug || course.uuid}` : APPLY_HREF;
+              return (
+              <Link
+                key={`${course.uuid || course.name}-${index}`}
+                href={href}
+                className="group flex items-center gap-3 rounded-2xl border border-[#EAE2F2] bg-[#F7F1FC] p-4 transition hover:border-[#5412A5]/30 hover:shadow-sm"
+              >
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-[#5412A5]">
+                  <GraduationCap className="h-5 w-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[14px] font-extrabold text-[#242033]">{course.code || course.name}</span>
+                  <span className="mt-0.5 block text-[12px] text-[#686477]">{course.name}</span>
+                </span>
+                <ArrowRight className="h-4 w-4 text-[#5412A5] transition group-hover:translate-x-0.5" />
+              </Link>
+            );
+            })}
+          </div>
+        </>
+      )}
+    </section>
   );
 }
 
@@ -309,95 +522,107 @@ function FAQSection({ faqs, name }: { faqs: CourseFaq[]; name: string }) {
   const active = faqs.filter((faq) => faq?.is_active !== false && faq.question);
   const [openId, setOpenId] = useState<string | null>(active[0]?.id ?? null);
   if (!active.length) return null;
+  const mid = Math.ceil(active.length / 2);
+  const columns = [active.slice(0, mid), active.slice(mid)];
 
   return (
-    <WhiteCard id="faqs">
-      <SectionHeading>Frequently Asked Questions{name ? ` about ${name}` : ""}</SectionHeading>
-      <div className="mt-5 space-y-3">
-        {active.map((faq, index) => {
-          const open = openId === faq.id;
-          return (
-            <article
-              key={faq.id}
-              className="overflow-hidden rounded-2xl border bg-white transition"
-              style={{ borderColor: open ? C.primary : C.border }}
-            >
-              <button
-                type="button"
-                className="flex w-full items-start justify-between gap-4 px-5 py-4 text-left"
-                onClick={() => setOpenId(open ? null : faq.id)}
-                aria-expanded={open}
-              >
-                <span className="text-[14px] font-semibold leading-6 text-[#17134A] sm:text-[15px]">
-                  <span className="mr-1.5 font-bold text-[#6B21A8]">Q{index + 1}.</span>
-                  {faq.question.replace(/^Q\d+\.\s*/i, "")}
-                </span>
-                <span
-                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-lg font-bold"
-                  style={{ background: open ? C.primary : C.light, color: open ? "white" : C.primary }}
-                >
-                  {open ? "−" : "+"}
-                </span>
-              </button>
-              <div className="grid transition-[grid-template-rows] duration-300" style={{ gridTemplateRows: open ? "1fr" : "0fr" }}>
-                <div className="overflow-hidden">
-                  <div className="px-5 pb-5 pr-12 text-[14px] leading-7 text-[#6B6578]">{faq.answer}</div>
-                </div>
-              </div>
-            </article>
-          );
-        })}
+    <section id="faqs" className="scroll-mt-28 rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5 sm:p-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <SectionHeading>Frequently Asked Questions</SectionHeading>
+        <p className="text-[12px] text-[#686477]">Find answers to common questions about {name}.</p>
       </div>
-    </WhiteCard>
-  );
-}
-
-function BottomCTA({ name }: { name: string }) {
-  return (
-    <section
-      className="relative overflow-hidden py-12 text-white"
-      style={{ background: `linear-gradient(135deg, ${C.dark} 0%, ${C.primary} 42%, ${C.magenta} 72%, ${C.accent} 100%)` }}
-    >
-      <div className="era-shell relative flex flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
-        <div>
-          <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Ready to start at {name}?</h2>
-          <p className="mt-2 max-w-xl text-white/80">Talk to a counsellor and get guidance on admissions, eligibility and next steps.</p>
-        </div>
-        <Link
-          href={APPLY_HREF}
-          className="inline-flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-8 text-sm font-extrabold text-[#6B21A8] transition hover:-translate-y-0.5 sm:w-auto"
-        >
-          <Headset className="h-4 w-4" />
-          Get Counselling
-          <ArrowRight className="h-4 w-4" />
-        </Link>
+      <div className="mt-5 grid gap-3 md:grid-cols-2">
+        {columns.map((column, columnIndex) => (
+          <div key={columnIndex} className="space-y-2">
+            {column.map((faq) => {
+              const open = openId === faq.id;
+              return (
+                <article key={faq.id} className="overflow-hidden rounded-xl border border-[#EAE2F2]">
+                  <button
+                    type="button"
+                    className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
+                    onClick={() => setOpenId(open ? null : faq.id)}
+                    aria-expanded={open}
+                  >
+                    <span className="text-[14px] font-semibold text-[#242033]">{faq.question.replace(/^Q\d+\.\s*/i, "")}</span>
+                    <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#F7F1FC] text-[#5412A5]">
+                      {open ? "−" : "+"}
+                    </span>
+                  </button>
+                  <div className="grid transition-[grid-template-rows] duration-300" style={{ gridTemplateRows: open ? "1fr" : "0fr" }}>
+                    <div className="overflow-hidden">
+                      <p className="px-4 pb-3 text-[13px] leading-6 text-[#686477]">{faq.answer}</p>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ))}
       </div>
     </section>
   );
 }
 
-export function UniversityDetailPage({ university }: { university: UniversityDetail }) {
-  const displayName = university.shortName || university.name;
-  const aboutLead = university.about.blocks.find((block) => block.type === "p")?.text || "";
+export function UniversityDetailPage({
+  university,
+  blogs = [],
+  suggestedCourses = [],
+}: {
+  university: UniversityDetail;
+  blogs?: Blog[];
+  suggestedCourses?: DiscoveryCourse[];
+}) {
+  console.log(university,"------------------")
+  const paragraphs = university.paragraphs.filter((item) => item.title || stripPreview(item.content));
+  const aboutParagraph = findParagraph(paragraphs, /about/i);
+  const eligibilityParagraph = findParagraph(paragraphs, /eligib/i);
+  const lmsParagraph = findParagraph(paragraphs, /lms|learning management/i);
+  const examParagraph = findParagraph(paragraphs, /exam|evaluat/i);
+  const careerParagraph = findParagraph(paragraphs, /career/i);
+  const aboutLead =
+    university.about.blocks.find((block) => block.type === "p")?.text
+    || stripPreview(aboutParagraph?.content || "")
+    || "";
+  const aboutContent = aboutParagraph?.content || university.about.blocks.map((block) => block.text).join("\n");
+  const careerContent = careerParagraph?.content || university.career.blocks.map((block) => block.text).join("\n");
   const activeFaqs = university.faqs.filter((faq) => faq?.is_active !== false && faq.question);
-  const careerWithoutRecruiters: RichSection = {
-    ...university.career,
-    blocks: university.career.blocks.filter(
-      (block) => !university.recruiters.includes(block.text) && !/hiring partner|recruiter/i.test(block.text)
-    ),
-  };
+  const similar = university.similar.filter((item) => item.uuid !== university.uuid).slice(0, 4);
+  const approvalNames = university.approvals.map((item) => item.name).filter(Boolean);
 
-  const navTabs: NavTab[] = [
-    ...(hasSection(university.about) ? [{ id: "about", label: "About", Icon: BookOpen }] : []),
-    ...(hasSection(university.features) ? [{ id: "features", label: "Key Features", Icon: Award }] : []),
-    ...(university.approvals.length ? [{ id: "approvals", label: "Approvals", Icon: Award }] : []),
-    ...(hasSection(university.admission) ? [{ id: "admission", label: "Admission", Icon: ClipboardCheck }] : []),
-    ...(hasSection(careerWithoutRecruiters) ? [{ id: "career", label: "Careers", Icon: Briefcase }] : []),
-    ...(university.recruiters.length ? [{ id: "recruiters", label: "Recruiters", Icon: GraduationCap }] : []),
-    ...(activeFaqs.length ? [{ id: "faqs", label: "FAQ", Icon: ClipboardCheck }] : []),
+  const highlightItems = [
+    { title: "100% Online", subtitle: "Flexible Learning", Icon: GraduationCap },
+    {
+      title: "UG & PG Programmes",
+      subtitle: "Multiple Disciplines",
+      Icon: BookOpen,
+    },
+    {
+      title: "Recognised & Accredited",
+      subtitle: approvalNames.slice(0, 4).join(", ") || "Check approvals below",
+      Icon: Award,
+    },
+    { title: "Working Professionals", subtitle: "Learn at Your Pace", Icon: Users },
   ];
 
-  const [activeSection, setActiveSection] = useState(navTabs[0]?.id || "about");
+  const statCards = [
+    university.established ? { label: "Established", value: university.established, Icon: Calendar } : null,
+    approvalNames.length ? { label: "Accreditation", value: approvalNames.join(", "), Icon: Building2 } : null,
+    university.grade ? { label: "Grade", value: university.grade, Icon: Award } : null,
+    { label: "Learning Mode", value: "100% Online", Icon: Laptop },
+  ].filter(Boolean) as { label: string; value: string; Icon: typeof Award }[];
+
+  const navTabs: NavTab[] = [
+    { id: "overview", label: "Overview" },
+    { id: "courses", label: "Courses" },
+    ...(eligibilityParagraph ? [{ id: "eligibility", label: "Eligibility" }] : []),
+    ...(university.approvals.length ? [{ id: "approvals", label: "Approvals" }] : []),
+    ...(lmsParagraph ? [{ id: "lms", label: "LMS" }] : []),
+    ...(examParagraph ? [{ id: "examination", label: "Examination" }] : []),
+    ...(activeFaqs.length ? [{ id: "faqs", label: "FAQs" }] : []),
+  ];
+
+  const [activeSection, setActiveSection] = useState(navTabs[0]?.id || "overview");
 
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
@@ -408,7 +633,7 @@ export function UniversityDetailPage({ university }: { university: UniversityDet
         ([entry]) => {
           if (entry.isIntersecting) setActiveSection(tab.id);
         },
-        { rootMargin: "-30% 0px -55% 0px", threshold: 0.05 }
+        { rootMargin: "-28% 0px -58% 0px", threshold: 0.08 }
       );
       observer.observe(el);
       observers.push(observer);
@@ -417,64 +642,237 @@ export function UniversityDetailPage({ university }: { university: UniversityDet
   }, [navTabs.map((tab) => tab.id).join("|")]);
 
   return (
-    <main id="main" className="bg-[#FAF7FF] text-[#17134A]">
-      <UniversityHero university={university} lead={aboutLead.slice(0, 220)} />
+    <main id="main" className="bg-[#FAF9FC] text-[#242033]">
+      <UniversityHero university={university} lead={aboutLead.slice(0, 180)} />
+      <HighlightStrip items={highlightItems} />
       <UniversityNavigation activeSection={activeSection} tabs={navTabs} />
 
-      <div className="era-shell py-6 sm:py-8 lg:py-10">
-        <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-[13px] text-[#6B6578]" aria-label="Breadcrumb">
-          <Link href="/" className="font-medium text-[#6B21A8] hover:underline">Home</Link>
-          <span aria-hidden>›</span>
-          <Link href="/universities" className="font-medium text-[#6B21A8] hover:underline">Universities</Link>
-          <span aria-hidden>›</span>
-          <span className="font-semibold text-[#17134A]">{university.name}</span>
-        </nav>
+      <div className="era-shell py-8 lg:py-10">
+        <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="min-w-0 space-y-6 sm:space-y-7">
+            {aboutContent ? (
+              <section id="overview" className="scroll-mt-28 rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5 sm:p-6">
+                <SectionHeading>{aboutParagraph?.title?.trim() || "About the University"}</SectionHeading>
+                <div className="mt-4">
+                  <ReadMoreText content={aboutContent} />
+                </div>
+              </section>
+            ) : null}
 
-        <div className="space-y-6 sm:space-y-8">
-          {hasSection(university.about) ? (
-            <WhiteCard id="about">
-              <SectionHeading>{university.about.title || `About ${university.name}`}</SectionHeading>
-              <div className="mt-4">
-                <RichContent blocks={university.about.blocks} />
-              </div>
-            </WhiteCard>
-          ) : null}
+            {statCards.length ? (
+              <section className="rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5 sm:p-6">
+                <SectionHeading>University Highlights</SectionHeading>
+                <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  {statCards.map((card) => (
+                    <article key={card.label} className="rounded-2xl border border-[#EAE2F2] bg-[#F7F1FC] px-4 py-4 text-center">
+                      <span className="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#5412A5]">
+                        <card.Icon className="h-5 w-5" />
+                      </span>
+                      <p className="mt-2 text-[12px] font-semibold text-[#686477]">{card.label}</p>
+                      <p className="mt-1 text-[13px] font-extrabold leading-snug text-[#242033]">{card.value}</p>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
-          {hasSection(university.features) ? (
-            <WhiteCard id="features">
-              <SectionHeading>{university.features.title || "Key Features"}</SectionHeading>
-              <div className="mt-4">
-                <RichContent blocks={university.features.blocks} />
-              </div>
-            </WhiteCard>
-          ) : null}
+            {university.approvals.length ? (
+              <section id="approvals" className="scroll-mt-28 rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5 sm:p-6">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                  <SectionHeading>Approvals & Accreditations</SectionHeading>
+                  <p className="text-[12px] text-[#686477]">Recognised by leading regulatory bodies</p>
+                </div>
+                <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  {university.approvals.map((item) => (
+                    <article key={item.id} className="flex flex-col items-center rounded-2xl border border-[#EAE2F2] bg-white p-4 text-center shadow-sm">
+                      {item.logo ? (
+                        <Image src={item.logo} alt={item.name} width={72} height={72} className="h-14 w-14 object-contain" unoptimized />
+                      ) : (
+                        <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#F7F1FC] text-[#5412A5]">
+                          <Award className="h-7 w-7" />
+                        </span>
+                      )}
+                      <p className="mt-3 text-[13px] font-extrabold text-[#242033]">{item.name}</p>
+                      <p className="mt-1 text-[11px] leading-4 text-[#686477]">
+                        {item.description || APPROVAL_BLURB[item.name] || "Recognised approval body"}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
-          <ApprovalsSection university={university} />
+            <UniversityCourses courses={university.courses} tables={university.tables} />
 
-          {hasSection(university.admission) ? (
-            <WhiteCard id="admission">
-              <SectionHeading>{university.admission.title || "Admission Process"}</SectionHeading>
-              <div className="mt-4">
-                <RichContent blocks={university.admission.blocks} />
-              </div>
-            </WhiteCard>
-          ) : null}
+            <div className="grid gap-4 ">
+              {eligibilityParagraph ? (
+                <section id="eligibility" className="scroll-mt-28 rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5">
+                  <SectionHeading>Eligibility Criteria</SectionHeading>
+                  <div className="mt-4">
+                    <ParagraphBody content={eligibilityParagraph.content} />
+                  </div>
+                </section>
+              ) : null}
+              {lmsParagraph ? (
+                <section id="lms" className="scroll-mt-28 rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5">
+                  {/* <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7F1FC] text-[#5412A5]"> */}
+                    {/* <Laptop className="h-5 w-5" /> */}
+                  {/* </div> */}
+                  <SectionHeading>{lmsParagraph.title || "Learning Management System (LMS)"}</SectionHeading>
+                  <div className="mt-4">
+                    <ReadMoreText content={lmsParagraph.content} limit={280} />
+                  </div>
+                </section>
+              ) : null}
+              {examParagraph ? (
+                <section id="examination" className="scroll-mt-28 rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5">
+                  {/* <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7F1FC] text-[#5412A5]">
+                    <ClipboardCheck className="h-5 w-5" />
+                  </div> */}
+                  <SectionHeading>{examParagraph.title || "Examination & Evaluation"}</SectionHeading>
+                  <div className="mt-4">
+                    <ReadMoreText content={examParagraph.content} limit={280} />
+                  </div>
+                </section>
+              ) : null}
+              {stripPreview(careerContent) ? (
+                <section id="career" className="scroll-mt-28 rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5">
+                  <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7F1FC] text-[#5412A5]">
+                    <Briefcase className="h-5 w-5" />
+                  </div>
+                  <SectionHeading>Career Opportunities</SectionHeading>
+                  <div className="mt-4">
+                    <ReadMoreText content={careerContent} limit={240} />
+                  </div>
+                </section>
+              ) : null}
+            </div>
 
-          {hasSection(careerWithoutRecruiters) ? (
-            <WhiteCard id="career">
-              <SectionHeading>{university.career.title || "Career Prospects"}</SectionHeading>
-              <div className="mt-4">
-                <RichContent blocks={careerWithoutRecruiters.blocks} />
-              </div>
-            </WhiteCard>
-          ) : null}
+            {(university.companies.length || university.recruiters.length) ? (
+              <section className="rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5 sm:p-6">
+                <SectionHeading>Top Recruiters</SectionHeading>
+                <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                  {(university.companies.length
+                    ? university.companies
+                    : university.recruiters.map((name) => ({ uuid: name, name, logo: "", website: "" }))
+                  ).map((company) => {
+                    const cardClass = "flex flex-col items-center rounded-2xl border border-[#EAE2F2] bg-[#F7F1FC] px-3 py-4 transition hover:border-[#5412A5]/30";
+                    const inner = (
+                      <>
+                        <CompanyMark name={company.name} logo={company.logo} />
+                        <span className="mt-2 line-clamp-2 text-center text-[12px] font-semibold leading-4 text-[#242033]">{company.name}</span>
+                      </>
+                    );
+                    return company.website ? (
+                      <a key={company.uuid || company.name} href={company.website} target="_blank" rel="noreferrer" className={cardClass}>
+                        {inner}
+                      </a>
+                    ) : (
+                      <div key={company.uuid || company.name} className={cardClass}>
+                        {inner}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : null}
 
-          <RecruitersSection names={university.recruiters} />
-          <FAQSection faqs={activeFaqs} name={displayName} />
+            <FAQSection faqs={activeFaqs} name={university.name} />
+          </div>
+
+          <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+            <EnquiryForm
+              university={university}
+              programmes={[...university.courses, ...programmesFromTables(university.tables)]}
+            />
+
+            {blogs.length ? (
+              <SidebarCard title="Latest Blogs" href="/blogs">
+                <ul className="space-y-3">
+                  {blogs.map((blog) => (
+                    <li key={blog.uuid}>
+                      <Link href={`/blogs/${blog.slug}`} className="flex gap-3 rounded-xl p-1 transition hover:bg-[#F7F1FC]">
+                        <span className="relative h-14 w-16 shrink-0 overflow-hidden rounded-lg bg-[#F7F1FC]">
+                          <Image src={resolveBlogImageUrl(blog.featured_image)} alt="" fill className="object-cover" unoptimized />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="line-clamp-2 text-[13px] font-bold leading-snug text-[#242033]">{blog.title}</span>
+                          <span className="mt-1 block text-[11px] text-[#686477]">{formatBlogDate(blog.published_at || blog.created_at)}</span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </SidebarCard>
+            ) : null}
+
+            {similar.length ? (
+              <SidebarCard title="Suggested Universities" href="/universities">
+                <ul className="space-y-3">
+                  {similar.map((item: DiscoveryUniversity) => (
+                    <li key={item.uuid}>
+                      <Link href={`/universities/${item.uuid}`} className="flex items-center gap-3 rounded-xl p-1 transition hover:bg-[#F7F1FC]">
+                        <span className="inline-flex h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-[#F7F1FC]">
+                          {item.logo ? (
+                            <Image src={item.logo} alt="" width={40} height={40} className="h-full w-full object-contain p-1" unoptimized />
+                          ) : (
+                            <Building2 className="m-auto h-4 w-4 text-[#5412A5]" />
+                          )}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="line-clamp-2 text-[13px] font-bold text-[#242033]">{item.name}</span>
+                          {item.location ? <span className="mt-0.5 block truncate text-[11px] text-[#686477]">{item.state || item.location}</span> : null}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </SidebarCard>
+            ) : null}
+
+            {suggestedCourses.length ? (
+              <SidebarCard title="Suggested Courses" href="/courses/filtered">
+                <ul className="space-y-3">
+                  {suggestedCourses.map((course) => (
+                    <li key={course.id}>
+                      <Link href={`/courses/${course.slug || course.id}`} className="flex items-center gap-3 rounded-xl p-1 transition hover:bg-[#F7F1FC]">
+                        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#F7F1FC] text-[#5412A5]">
+                          <BookOpen className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="line-clamp-2 text-[13px] font-bold text-[#242033]">{course.title}</span>
+                          <span className="mt-0.5 block text-[11px] text-[#686477]">{course.level} · {course.studyMode}</span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </SidebarCard>
+            ) : null}
+          </aside>
         </div>
       </div>
 
-      <BottomCTA name={displayName} />
+      <section className="relative overflow-hidden py-10 text-white" style={{ background: `linear-gradient(110deg, ${C.primary} 0%, ${C.secondary} 46%, ${C.magenta} 100%)` }}>
+        <div className="era-shell relative flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-extrabold tracking-tight sm:text-[1.75rem]">Ready to start at {university.name}?</h2>
+            <p className="mt-2 max-w-xl text-sm text-white/85">
+              Talk to a counsellor now and get guidance on programmes, eligibility and the admission process.
+            </p>
+          </div>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+            <Link href={APPLY_HREF} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-extrabold text-[#5412A5]">
+              Apply Now
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link href={APPLY_HREF} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/70 px-6 text-sm font-extrabold text-white">
+              <Headset className="h-4 w-4" />
+              Talk to an Expert
+            </Link>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

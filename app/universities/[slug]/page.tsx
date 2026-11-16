@@ -1,5 +1,7 @@
 import { InnerPage } from "@/components/InnerPage";
 import { UniversityDetailPage } from "@/components/universities/UniversityDetailPage";
+import { fetchBlogs } from "@/lib/blogs";
+import { fetchDiscoveryCourses } from "@/lib/courseDiscovery";
 import { fetchUniversityDetail } from "@/lib/universityDetail";
 
 const COPY: Record<string, { title: string; description: string }> = {
@@ -32,8 +34,18 @@ export default async function UniversityPage({
   }
 
   try {
-    const university = await fetchUniversityDetail(slug);
-    return <UniversityDetailPage university={university} />;
+    const [university, blogResult, discoveryCourses] = await Promise.all([
+      fetchUniversityDetail(slug),
+      fetchBlogs({ status: "published", limit: 4 }).catch(() => ({ blogs: [] })),
+      fetchDiscoveryCourses().catch(() => []),
+    ]);
+    return (
+      <UniversityDetailPage
+        university={university}
+        blogs={blogResult.blogs.slice(0, 3)}
+        suggestedCourses={discoveryCourses.slice(0, 4)}
+      />
+    );
   } catch {
     return (
       <InnerPage
