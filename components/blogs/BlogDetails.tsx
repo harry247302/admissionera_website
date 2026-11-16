@@ -539,7 +539,7 @@ export function BlogDetails({
                 This article is currently being prepared. Check back shortly for
                 the full content.
               </p>
-            )}
+            ) : null}
             
             {blog.tags && blog.tags.length > 0 ? (
               <div className="mt-10 border-t border-slate-100 pt-6">
@@ -626,7 +626,6 @@ export function BlogDetails({
                   </p>
                 </div>
               </div>
-            ) : null}
             ) : null}
 
             {/* Share buttons */}

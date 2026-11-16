@@ -1,10 +1,13 @@
-import { InnerPage } from "@/components/InnerPage";
+import { UniversitiesDirectory } from "@/components/universities/UniversitiesDirectory";
+import { fetchDiscoveryUniversities, type DiscoveryUniversity } from "@/lib/universities";
 
-export default function UniversitiesPage() {
-  return (
-    <InnerPage
-      title="Top Universities"
-      description="Explore Indian and international universities by rankings, fees, placements and student outcomes."
-    />
-  );
+export default async function UniversitiesPage() {
+  let universities: DiscoveryUniversity[] = [];
+  try {
+    universities = await fetchDiscoveryUniversities();
+  } catch {
+    universities = [];
+  }
+
+  return <UniversitiesDirectory universities={universities} />;
 }
