@@ -15,6 +15,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import type { Blog, BlogContentTable } from "@/lib/blogs";
+import type { BlogUniversityCourse } from "@/lib/universities";
 import {
   formatBlogDate,
   calculateReadingTime,
@@ -54,6 +55,7 @@ interface BlogDetailsProps {
   relatedBlogs: Blog[];
   latestBlogs?: Blog[];
   universities?: BlogUniversityPreview[];
+  universityCourses?: BlogUniversityCourse[];
 }
 
 function looksLikeHtml(value: string) {
@@ -348,6 +350,7 @@ export function BlogDetails({
   relatedBlogs,
   latestBlogs = [],
   universities = [],
+  universityCourses = [],
 }: BlogDetailsProps) {
   const [copied, setCopied] = useState(false);
 
@@ -534,7 +537,7 @@ export function BlogDetails({
             )}
 
             {/* Fallback when no content at all */}
-            {!hasArticleBody && !displayExcerpt ? (
+            {!hasArticleBody && !displayExcerpt && (
               <p className="mt-6 text-base leading-relaxed text-slate-500 italic">
                 This article is currently being prepared. Check back shortly for
                 the full content.
@@ -611,6 +614,47 @@ export function BlogDetails({
                 </ul>
               </section>
             ) : null}
+            {universityCourses.length > 0 ? (
+              <section className="mt-10">
+                <h2 className="text-lg font-extrabold text-[#17134A]">University Courses</h2>
+                <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[480px] text-left text-sm">
+                      <thead>
+                        <tr className="bg-[#F8F6FF] text-[#17134A]">
+                          <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                            University
+                          </th>
+                          <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                            Course
+                          </th>
+                          <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                            Fees
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {universityCourses.map((row) => (
+                          <tr key={`${row.universityUuid}-${row.courseUuid}`} className="border-t border-slate-100">
+                            <td className="px-4 py-3 font-semibold text-[#17134A]">
+                              <Link href={`/universities/${row.universityUuid}`} className="hover:text-era-primary">
+                                {row.universityName}
+                              </Link>
+                            </td>
+                            <td className="px-4 py-3 leading-6 text-slate-700">
+                              <Link href={`/courses/${row.courseUuid}`} className="hover:text-era-primary">
+                                {row.courseName}
+                              </Link>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-slate-700">{row.fees}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            ) : null}
             {blog.author_name ? (
               <div className="mt-8 flex items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50/50 p-5">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-era-lilac text-lg font-bold text-era-primary">
@@ -626,7 +670,6 @@ export function BlogDetails({
                   </p>
                 </div>
               </div>
-            ) : null}
             ) : null}
 
             {/* Share buttons */}

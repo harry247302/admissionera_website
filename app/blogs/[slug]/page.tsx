@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { fetchBlogBySlug, fetchLatestBlogs, fetchRelatedBlogs, sanitizeExcerpt, resolveBlogImageUrl } from "@/lib/blogs";
 import { BlogDetails } from "@/components/blogs/BlogDetails";
-import { fetchDiscoveryUniversities } from "@/lib/universities";
+import { fetchDiscoveryUniversities, fetchUniversityCoursesTable } from "@/lib/universities";
 
 const SITE_URL = "https://admissionera.com";
 
@@ -107,6 +107,7 @@ export default async function BlogSlugPage({ params }: Props) {
         })),
     )
     .catch(() => []);
+  const universityCourses = await fetchUniversityCoursesTable(universities).catch(() => []);
 
   // Build JSON-LD structured data for the article
   const imageUrl = resolveBlogImageUrl(blog.featured_image);
@@ -169,6 +170,7 @@ export default async function BlogSlugPage({ params }: Props) {
         relatedBlogs={relatedBlogs}
         latestBlogs={latestBlogs}
         universities={universities}
+        universityCourses={universityCourses}
       />
     </main>
   );

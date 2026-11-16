@@ -199,10 +199,65 @@ export function formatInrShort(amount: number) {
 }
 
 type ApiUniversityCourse = {
+  uuid?: string;
   name?: string;
   code?: string;
   fees?: { amount?: number | string | null }[];
 };
+
+export type BlogUniversityCourse = {
+  universityUuid: string;
+  universityName: string;
+  courseUuid: string;
+  courseName: string;
+  fees: string;
+};
+
+function formatCourseFees(fees: ApiUniversityCourse["fees"]) {
+  const amounts = (fees || [])
+    .map((fee) => Number(fee.amount))
+    .filter((amount) => Number.isFinite(amount) && amount > 0);
+
+  if (!amounts.length) return "—";
+  const min = Math.min(...amounts);
+  const max = Math.max(...amounts);
+  return min === max ? formatInrShort(min) : `${formatInrShort(min)} - ${formatInrShort(max)}`;
+}
+
+export async function fetchUniversityCoursesTable(
+  universities: { uuid: string; name: string }[],
+): Promise<BlogUniversityCourse[]> {
+  const rows = await Promise.all(
+    universities.map(async (university) => {
+      const res = await fetch(`${UNIVERSITIES_API_URL}/${encodeURIComponent(university.uuid)}`, {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      if (!res.ok) return [] as BlogUniversityCourse[];
+
+      const payload = await res.json().catch(() => null);
+      const detail = payload?.university || payload?.data || payload;
+      const courses = (detail?.courses || []) as ApiUniversityCourse[];
+
+      return courses
+        .map((course) => {
+          const courseUuid = String(course.uuid || "").trim();
+          const courseName = String(course.name || "").trim();
+          if (!courseUuid || !courseName) return null;
+          return {
+            universityUuid: university.uuid,
+            universityName: university.name,
+            courseUuid,
+            courseName,
+            fees: formatCourseFees(course.fees),
+          };
+        })
+        .filter((row): row is BlogUniversityCourse => Boolean(row));
+    }),
+  );
+
+  return rows.flat();
+}
 
 export async function fetchUniversityCardDetails(uuid: string): Promise<UniversityCardDetails> {
   const res = await fetch(`${UNIVERSITIES_API_URL}/${encodeURIComponent(uuid)}`, {
