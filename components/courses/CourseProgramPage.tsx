@@ -76,6 +76,38 @@ function parseRichLines(content = "") {
     .filter((l) => l.length > 2);
 }
 
+function looksLikeHtml(value: string) {
+  return /<\/?[a-z][\s\S]*>/i.test(value);
+}
+
+function sanitizeHtml(value: string) {
+  return String(value || "")
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "");
+}
+
+function RichHtml({ content, className = "" }: { content?: string | null; className?: string }) {
+  const raw = String(content || "").replace(/\\n/g, "\n").trim();
+  if (!raw) return null;
+
+  if (looksLikeHtml(raw)) {
+    return (
+      <div
+        className={`blog-content min-w-0 max-w-full overflow-x-auto [&_iframe]:aspect-video [&_iframe]:h-auto [&_iframe]:w-full ${className}`}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(raw) }}
+      />
+    );
+  }
+
+  return (
+    <div className={`blog-content space-y-3 ${className}`}>
+      {parseRichLines(raw).map((line, index) => (
+        <p key={index}>{line}</p>
+      ))}
+    </div>
+  );
+}
+
 // ─── Tiny SVG Icons ───────────────────────────────────────────────────────────
 const SvgProps = {
   viewBox: "0 0 24 24",
@@ -147,13 +179,13 @@ const CAREER_ICONS = [
 
 function SectionHeading({ children }: { children: ReactNode }) {
   return (
-    <h2 className="flex items-center gap-3 text-[1.3rem] font-extrabold tracking-tight text-[#171421] sm:text-2xl">
+    <h2 className="flex min-w-0 items-start gap-2 text-[1.15rem] font-extrabold leading-snug tracking-tight text-[#171421] sm:items-center sm:gap-3 sm:text-[1.3rem] lg:text-2xl">
       <span
-        className="inline-block h-6 w-1 shrink-0 rounded-full"
+        className="mt-1 inline-block h-5 w-1 shrink-0 rounded-full sm:mt-0 sm:h-6"
         style={{ background: C.primary }}
         aria-hidden
       />
-      {children}
+      <span className="min-w-0 break-words">{children}</span>
     </h2>
   );
 }
@@ -204,19 +236,19 @@ function CourseHero({ course, duration, mode }: { course: CourseDetail; duration
       <div className="pointer-events-none absolute -bottom-16 right-[30%] h-48 w-48 rounded-full opacity-10"
         style={{ background: "white" }} aria-hidden />
 
-      <div className="era-shell relative py-8 lg:py-10">
+      <div className="era-shell relative py-6 sm:py-8 lg:py-10">
         {/* Breadcrumb */}
-        <nav className="mb-5 flex flex-wrap items-center gap-1.5 text-[13px] text-white/70" aria-label="Breadcrumb">
-          <Link href="/" className="transition hover:text-white">Home</Link>
+        <nav className="mb-4 flex min-w-0 flex-wrap items-center gap-1.5 text-[12px] text-white/70 sm:mb-5 sm:text-[13px]" aria-label="Breadcrumb">
+          <Link href="/" className="shrink-0 transition hover:text-white">Home</Link>
           <span aria-hidden>›</span>
-          <Link href="/programs" className="transition hover:text-white">Courses</Link>
+          <Link href="/programs" className="shrink-0 transition hover:text-white">Courses</Link>
           <span aria-hidden>›</span>
-          <span className="font-semibold text-white">{shortLabel(course)}</span>
+          <span className="min-w-0 truncate font-semibold text-white">{shortLabel(course)}</span>
         </nav>
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_420px] lg:items-center lg:gap-10">
+        <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(260px,420px)] lg:gap-10">
           {/* Left content */}
-          <div>
+          <div className="min-w-0">
             <span
               className="mb-4 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest"
               style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
@@ -225,14 +257,14 @@ function CourseHero({ course, duration, mode }: { course: CourseDetail; duration
               Online Degree
             </span>
 
-            <h1 className="text-[2rem] font-extrabold leading-[1.15] tracking-[-0.03em] text-white sm:text-[2.5rem] lg:text-[2.75rem]">
+            <h1 className="break-words text-[1.6rem] font-extrabold leading-[1.15] tracking-[-0.03em] text-white sm:text-[2.2rem] lg:text-[2.75rem]">
               {displayTitle}{" "}
               {codeHighlight && (
                 <span style={{ color: "#fbbf24" }}>{codeHighlight}</span>
               )}
             </h1>
 
-            <p className="mt-4 max-w-xl text-[15px] leading-7 text-white/80">{lead}</p>
+            <p className="mt-3 max-w-xl text-[14px] leading-6 text-white/80 sm:mt-4 sm:text-[15px] sm:leading-7">{lead}</p>
 
             {/* Info row */}
             <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-[13px] font-medium text-white/90">
@@ -255,17 +287,17 @@ function CourseHero({ course, duration, mode }: { course: CourseDetail; duration
             </div>
 
             {/* CTAs */}
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
               <Link
                 href="/tools/course-finder"
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-bold transition hover:-translate-y-0.5"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-bold transition hover:-translate-y-0.5 sm:w-auto"
                 style={{ color: C.primary }}
               >
                 Apply Now →
               </Link>
               <Link
                 href="/tools/course-finder"
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/40 bg-white/10 px-6 text-sm font-bold text-white backdrop-blur transition hover:bg-white/20"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/40 bg-white/10 px-6 text-sm font-bold text-white backdrop-blur transition hover:bg-white/20 sm:w-auto"
               >
                 <Ico d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" className="h-4 w-4" />
                 Download Brochure
@@ -273,14 +305,14 @@ function CourseHero({ course, duration, mode }: { course: CourseDetail; duration
             </div>
           </div>
 
-          {/* Right: banner image */}
-          <div className="relative hidden overflow-hidden rounded-[1.5rem] lg:block" style={{ height: 360 }}>
+          {/* Banner: stacked on mobile, side image on desktop */}
+          <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl sm:rounded-[1.5rem] lg:aspect-auto lg:h-[360px]">
             <Image
               src={banner}
               alt={course.name}
               fill
               priority
-              sizes="420px"
+              sizes="(max-width: 1024px) 100vw, 420px"
               className="object-cover object-top"
               unoptimized={banner.startsWith("http")}
             />
@@ -309,19 +341,19 @@ function CourseHero({ course, duration, mode }: { course: CourseDetail; duration
 function CourseNavigation({ activeSection }: { activeSection: string }) {
   return (
     <nav
-      className="sticky top-0 z-30 w-full border-b bg-white shadow-sm"
+      className="sticky top-[64px] z-30 w-full border-b bg-white/95 shadow-sm backdrop-blur-md sm:top-[72px] lg:top-[78px]"
       style={{ borderColor: C.border }}
       aria-label="Course sections"
     >
       <div className="era-shell">
-        <div className="flex overflow-x-auto">
+        <div className="-mx-1 flex overflow-x-auto [scrollbar-width:none] snap-x snap-mandatory [&::-webkit-scrollbar]:hidden">
           {NAV_TABS.map((tab) => {
             const active = activeSection === tab.id;
             return (
               <a
                 key={tab.id}
                 href={`#${tab.id}`}
-                className="relative flex shrink-0 items-center gap-2 px-5 py-4 text-sm font-semibold transition"
+                className="relative flex shrink-0 snap-start items-center gap-1.5 whitespace-nowrap px-3 py-3 text-[13px] font-semibold transition sm:gap-2 sm:px-5 sm:py-4 sm:text-sm"
                 style={{
                   color: active ? C.primary : C.muted,
                   background: active ? C.light : "transparent",
@@ -358,7 +390,7 @@ function AdmissionForm({ courseName }: { courseName: string }) {
 
   return (
     <div
-      className="rounded-2xl p-5 shadow-[0_8px_30px_rgba(148,20,60,0.12)] sm:p-6"
+      className="rounded-2xl p-4 shadow-[0_8px_30px_rgba(148,20,60,0.12)] sm:p-6"
       style={{ background: `linear-gradient(160deg, ${C.dark} 0%, ${C.primary} 100%)` }}
     >
       <h3 className="text-base font-extrabold text-white">Apply for {shortLabel({ name: courseName, code: "" } as CourseDetail)}</h3>
@@ -388,11 +420,11 @@ function AdmissionForm({ courseName }: { courseName: string }) {
           </div>
 
           {/* Phone */}
-          <div className="flex gap-2">
-            <span className="inline-flex items-center rounded-xl border border-white/20 bg-white/10 px-3 text-sm font-semibold text-white/70">
+          <div className="flex min-w-0 gap-2">
+            <span className="inline-flex shrink-0 items-center rounded-xl border border-white/20 bg-white/10 px-3 text-sm font-semibold text-white/70">
               +91
             </span>
-            <div className="relative flex-1">
+            <div className="relative min-w-0 flex-1">
               <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2">
                 <Ico d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" className="h-4 w-4 text-white/50" />
               </span>
@@ -468,21 +500,21 @@ function CourseHighlights({ course, duration, feeLabel }: { course: CourseDetail
   ];
 
   return (
-    <div className="rounded-2xl border p-5" style={{ borderColor: C.border, background: C.light }}>
+    <div className="rounded-2xl border p-4 sm:p-5" style={{ borderColor: C.border, background: C.light }}>
       <h3 className="mb-4 text-base font-extrabold" style={{ color: C.text }}>
         Course Highlights
       </h3>
       <ul className="space-y-3">
         {rows.map((row) => (
-          <li key={row.label} className="flex items-center gap-3 text-sm">
+          <li key={row.label} className="flex min-w-0 items-start gap-3 text-sm sm:items-center">
             <span
               className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
               style={{ background: `${C.primary}18`, color: C.primary }}
             >
               <Ico d={row.icon} className="h-4 w-4" />
             </span>
-            <span className="font-medium" style={{ color: C.muted, minWidth: 90 }}>{row.label}</span>
-            <span className="ml-auto font-semibold" style={{ color: C.text }}>{row.value}</span>
+            <span className="w-[5.5rem] shrink-0 font-medium sm:w-[6.5rem]" style={{ color: C.muted }}>{row.label}</span>
+            <span className="min-w-0 break-words font-semibold sm:ml-auto sm:text-right" style={{ color: C.text }}>{row.value}</span>
           </li>
         ))}
       </ul>
@@ -496,9 +528,9 @@ function CareerSidebar({ roles }: { roles: string[] }) {
   const visible = showAll ? roles : roles.slice(0, 8);
 
   return (
-    <div className="rounded-2xl border p-5" style={{ borderColor: C.border }}>
+    <div className="rounded-2xl border p-4 sm:p-5" style={{ borderColor: C.border }}>
       <h3 className="mb-4 text-base font-extrabold" style={{ color: C.text }}>Career Opportunities</h3>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2">
         {visible.map((role, i) => (
           <div
             key={role}
@@ -547,13 +579,13 @@ function BurgundyFAQ({ faqs }: { faqs: CourseDetail["faqs"] }) {
           >
             <button
               type="button"
-              className="flex w-full items-start justify-between gap-4 px-5 py-4 text-left"
+              className="flex w-full items-start justify-between gap-3 px-4 py-3.5 text-left sm:gap-4 sm:px-5 sm:py-4"
               onClick={() => setOpenId(open ? null : faq.id)}
               aria-expanded={open}
             >
-              <span className="text-[15px] font-semibold leading-6" style={{ color: C.text }}>
+              <span className="min-w-0 text-[14px] font-semibold leading-6 sm:text-[15px]" style={{ color: C.text }}>
                 <span className="mr-1.5 font-bold" style={{ color: C.primary }}>Q{idx + 1}.</span>
-                {faq.question.replace(/^Q\d+\.\s*/i, "")}
+                {stripTags(faq.question).replace(/^Q\d+\.\s*/i, "")}
               </span>
               <span
                 className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-lg font-bold transition"
@@ -570,8 +602,8 @@ function BurgundyFAQ({ faqs }: { faqs: CourseDetail["faqs"] }) {
               style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
             >
               <div className="overflow-hidden">
-                <div className="px-5 pb-5 pr-12 text-[14px] leading-7" style={{ color: C.muted }}>
-                  {faq.answer}
+                <div className="px-4 pb-4 pr-10 sm:px-5 sm:pb-5 sm:pr-12">
+                  <RichHtml content={faq.answer} />
                 </div>
               </div>
             </div>
@@ -601,7 +633,7 @@ function CurriculumSection({ tables }: { tables: CourseContentTable[] }) {
   }, [rows]);
 
   return (
-    <div id="curriculum" className="scroll-mt-28">
+    <div id="curriculum" className="scroll-mt-36 sm:scroll-mt-40">
       <SectionHeading>Comprehensive Curriculum of the {shortLabel({ name: active?.title || "Course", code: "" } as CourseDetail)}</SectionHeading>
 
       {/* Semester tabs */}
@@ -635,9 +667,9 @@ function CurriculumSection({ tables }: { tables: CourseContentTable[] }) {
           <table className="min-w-full text-sm">
             <thead>
               <tr style={{ background: C.primary }}>
-                <th className="px-4 py-3 text-left font-bold text-white">S. No.</th>
+                <th className="whitespace-nowrap px-3 py-3 text-left font-bold text-white sm:px-4">S. No.</th>
                 {cols.map((col) => (
-                  <th key={col} className="px-4 py-3 text-left font-bold text-white">{col}</th>
+                  <th key={col} className="whitespace-nowrap px-3 py-3 text-left font-bold text-white sm:px-4">{col}</th>
                 ))}
               </tr>
             </thead>
@@ -647,12 +679,16 @@ function CurriculumSection({ tables }: { tables: CourseContentTable[] }) {
                   key={row.id}
                   style={{ background: idx % 2 === 0 ? "white" : C.light }}
                 >
-                  <td className="px-4 py-3 font-medium" style={{ color: C.muted }}>{idx + 1}</td>
+                  <td className="whitespace-nowrap px-3 py-3 font-medium sm:px-4" style={{ color: C.muted }}>{idx + 1}</td>
                   {cols.map((col) => {
-                    const val = row.content?.[col] ?? (col === cols[0] ? row.label : "—");
+                    const val = String((row.content?.[col] ?? (col === cols[0] ? row.label : "")) || "");
                     return (
-                      <td key={col} className="px-4 py-3" style={{ color: C.text }}>
-                        {val || "—"}
+                      <td key={col} className="max-w-[280px] px-3 py-3 align-top sm:max-w-none sm:px-4" style={{ color: C.text }}>
+                        {looksLikeHtml(val) ? (
+                          <RichHtml content={val} />
+                        ) : (
+                          val || "—"
+                        )}
                       </td>
                     );
                   })}
@@ -675,7 +711,7 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
   const mode = course.studyMode || course.attendanceMode || findTableValue(course.tables, ["mode"]) || "Online";
   const feeLabel = findTableValue(course.tables, ["fee", "tuition"]) || "Contact for fee details";
 
-  const careersText = course.careerOpportunities || findTableValue(course.tables, ["career"]) || "";
+  const careersText = stripTags(course.careerOpportunities || findTableValue(course.tables, ["career"]) || "");
   const careerRoles = useMemo(() => {
     const r = splitCareerRoles(careersText);
     return r.length
@@ -689,12 +725,10 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
   // About paragraph
   const aboutPara = course.paragraphs.find((p) => /about/i.test(p.title || ""));
   const aboutText = aboutPara?.content || course.overview || course.description || "";
-  const aboutLines = parseRichLines(aboutText);
 
   // Eligibility paragraph
   const eligPara = course.paragraphs.find((p) => /eligib/i.test(p.title || ""));
   const eligText = eligPara?.content || course.eligibility || "";
-  const eligLines = parseRichLines(eligText);
 
   // Overview paragraphs (non-about, non-eligibility)
   const contentParas = course.paragraphs.filter(
@@ -727,37 +761,40 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
       <CourseNavigation activeSection={activeSection} />
 
       {/* ── Main two-column layout ── */}
-      <div className="era-shell py-8 lg:py-10">
-        <div className="grid gap-7 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_360px]">
+      <div className="era-shell py-5 sm:py-8 lg:py-10">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] lg:gap-7 xl:grid-cols-[minmax(0,1fr)_360px]">
 
           {/* ════════ LEFT COLUMN ════════ */}
-          <div className="space-y-10 min-w-0">
+          <div className="order-2 min-w-0 space-y-6 sm:space-y-10 lg:order-1">
 
             {/* About + Overview */}
-            <section id="overview" className="scroll-mt-28">
+            <section id="overview" className="scroll-mt-36 sm:scroll-mt-40">
               <div
-                className="rounded-2xl border bg-white p-6"
+                className="rounded-2xl border bg-white p-4 sm:p-6"
                 style={{ borderColor: C.border }}
               >
                 <SectionHeading>About {shortLabel(course)}</SectionHeading>
-                <div className="mt-4 space-y-3 text-[15px] leading-7" style={{ color: C.muted }}>
-                  {aboutLines.length
-                    ? aboutLines.map((l, i) => <p key={i}>{l}</p>)
-                    : <p>{aboutText || "Details coming soon."}</p>
-                  }
+                <div className="mt-4">
+                  {aboutText ? (
+                    <RichHtml content={aboutText} />
+                  ) : (
+                    <p className="text-[15px] leading-7" style={{ color: C.muted }}>
+                      Details coming soon.
+                    </p>
+                  )}
                 </div>
               </div>
             </section>
 
             {/* Key Features */}
             <section>
-              <div className="rounded-2xl border bg-white p-6" style={{ borderColor: C.border }}>
+              <div className="rounded-2xl border bg-white p-4 sm:p-6" style={{ borderColor: C.border }}>
                 <SectionHeading>Key Features of {shortLabel(course)}</SectionHeading>
-                <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                   {FEATURE_CARDS.map((f) => (
                     <div
                       key={f.title}
-                      className="flex flex-col items-center rounded-2xl p-4 text-center transition hover:shadow-md"
+                      className="flex min-w-0 flex-col items-center rounded-2xl p-3 text-center transition hover:shadow-md sm:p-4"
                       style={{ background: C.light }}
                     >
                       <span
@@ -766,13 +803,13 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
                       >
                         <Ico d={f.icon} className="h-5 w-5" />
                       </span>
-                      <p className="mt-3 text-[13px] font-bold leading-tight" style={{ color: C.text }}>{f.title}</p>
+                      <p className="mt-3 text-[12px] font-bold leading-tight sm:text-[13px]" style={{ color: C.text }}>{f.title}</p>
                     </div>
                   ))}
                 </div>
 
                 {/* Info cards: Duration / Fee / Mode */}
-                <div className="mt-6 grid grid-cols-3 gap-4">
+                <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
                   {[
                     { label: "Duration", value: duration, sub: "", icon: "M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" },
                     { label: "Average Course Fee", value: feeLabel, sub: "(Depending on University)", icon: "M15 8.25H9m6 3H9m3 6-3-3h1.5a3 3 0 1 0 0-6M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" },
@@ -799,38 +836,26 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
             </section>
 
             {/* Eligibility */}
-            <section id="eligibility" className="scroll-mt-28">
-              <div className="rounded-2xl border bg-white p-6" style={{ borderColor: C.border }}>
+            <section id="eligibility" className="scroll-mt-36 sm:scroll-mt-40">
+              <div className="rounded-2xl border bg-white p-4 sm:p-6" style={{ borderColor: C.border }}>
                 <SectionHeading>Eligibility Criteria</SectionHeading>
-                {eligLines.length ? (
-                  <ul className="mt-5 space-y-3">
-                    {eligLines.map((line, i) => (
-                      <li key={i} className="flex items-start gap-3 text-[14px]" style={{ color: C.muted }}>
-                        <span
-                          className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-                          style={{ background: C.primary, color: "white" }}
-                        >
-                          <svg {...SvgProps} className="h-3 w-3">
-                            <path d="m5 12 4 4 7-8" />
-                          </svg>
-                        </span>
-                        {line}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="mt-4 text-[14px]" style={{ color: C.muted }}>
-                    {eligText || "Eligibility details will be listed here."}
-                  </p>
-                )}
+                <div className="mt-4">
+                  {eligText ? (
+                    <RichHtml content={eligText} />
+                  ) : (
+                    <p className="text-[14px]" style={{ color: C.muted }}>
+                      Eligibility details will be listed here.
+                    </p>
+                  )}
+                </div>
               </div>
             </section>
 
             {/* Admission Process */}
             <section>
-              <div className="rounded-2xl border bg-white p-6" style={{ borderColor: C.border }}>
+              <div className="rounded-2xl border bg-white p-4 sm:p-6" style={{ borderColor: C.border }}>
                 <SectionHeading>Admission Process</SectionHeading>
-                <div className="mt-6 grid gap-3 sm:grid-cols-5">
+                <div className="mt-6 grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 lg:grid-cols-5 lg:gap-3">
                   {ADMISSION_STEPS.map((step, idx) => (
                     <div key={step.num} className="flex flex-col items-center text-center">
                       <div className="flex items-center gap-0 sm:w-full sm:flex-row">
@@ -847,7 +872,7 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
                           </span>
                         </div>
                         {idx < ADMISSION_STEPS.length - 1 && (
-                          <span className="hidden h-px flex-1 sm:block" style={{ background: C.border }} />
+                          <span className="hidden h-px flex-1 lg:block" style={{ background: C.border }} />
                         )}
                       </div>
                       <p className="mt-2.5 text-[12px] font-semibold leading-tight" style={{ color: C.text }}>
@@ -861,25 +886,25 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
 
             {/* Curriculum */}
             {course.tables.length > 0 && (
-              <section className="rounded-2xl border bg-white p-6" style={{ borderColor: C.border }}>
+              <section className="rounded-2xl border bg-white p-4 sm:p-6" style={{ borderColor: C.border }}>
                 <CurriculumSection tables={course.tables} />
               </section>
             )}
 
             {/* Additional content paragraphs */}
             {contentParas.map((para) => (
-              <section key={para.id} className="rounded-2xl border bg-white p-6" style={{ borderColor: C.border }}>
-                <SectionHeading>{para.title}</SectionHeading>
-                <div className="mt-4 text-[15px] leading-7" style={{ color: C.muted }}>
-                  {parseRichLines(para.content).map((l, i) => <p key={i} className="mb-3">{l}</p>)}
+              <section key={para.id} className="rounded-2xl border bg-white p-4 sm:p-6" style={{ borderColor: C.border }}>
+                <SectionHeading>{stripTags(para.title) || "Details"}</SectionHeading>
+                <div className="mt-4">
+                  <RichHtml content={para.content} />
                 </div>
               </section>
             ))}
 
             {/* FAQs */}
             {activeFaqs.length > 0 && (
-              <section id="faqs" className="scroll-mt-28">
-                <div className="rounded-2xl border bg-white p-6" style={{ borderColor: C.border }}>
+              <section id="faqs" className="scroll-mt-36 sm:scroll-mt-40">
+                <div className="rounded-2xl border bg-white p-4 sm:p-6" style={{ borderColor: C.border }}>
                   <SectionHeading>Frequently Asked Questions</SectionHeading>
                   <div className="mt-5">
                     <BurgundyFAQ faqs={activeFaqs} />
@@ -891,11 +916,11 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
           </div>
 
           {/* ════════ RIGHT SIDEBAR ════════ */}
-          <aside className="space-y-5 lg:sticky lg:top-20 lg:self-start">
+          <aside className="order-1 space-y-5 lg:sticky lg:top-[168px] lg:order-2 lg:self-start">
             <AdmissionForm courseName={course.name} />
             <CourseHighlights course={course} duration={duration} feeLabel={feeLabel} />
             {careerRoles.length > 0 && (
-              <section id="careers" className="scroll-mt-28">
+              <section id="careers" className="scroll-mt-36 sm:scroll-mt-40">
                 <CareerSidebar roles={careerRoles} />
               </section>
             )}
@@ -906,26 +931,26 @@ export function CourseProgramPage({ course }: { course: CourseDetail }) {
 
       {/* ── Bottom CTA ── */}
       <section
-        className="relative overflow-hidden py-14 text-white"
+        className="relative overflow-hidden py-10 text-white sm:py-14"
         style={{ background: `linear-gradient(135deg, ${C.dark} 0%, ${C.primary} 60%, #c0244f 100%)` }}
       >
         <div className="pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full opacity-10" style={{ background: "white" }} aria-hidden />
         <div className="pointer-events-none absolute -bottom-10 right-0 h-40 w-40 rounded-full opacity-10" style={{ background: "white" }} aria-hidden />
-        <div className="era-shell relative flex flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
-          <div>
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 mb-3">
+        <div className="era-shell relative flex flex-col items-stretch gap-5 text-center sm:items-center sm:gap-6 sm:flex-row sm:justify-between sm:text-left">
+          <div className="min-w-0">
+            <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 sm:h-14 sm:w-14">
               <Ico d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.627 48.627 0 0 1 12 20.904a48.627 48.627 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.57 50.57 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" className="h-7 w-7 text-white" />
             </div>
-            <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+            <h2 className="text-xl font-extrabold tracking-tight sm:text-2xl lg:text-3xl">
               Ready to Start Your {shortLabel(course)} Journey?
             </h2>
-            <p className="mt-2 max-w-xl text-white/80">
+            <p className="mt-2 max-w-xl text-[14px] text-white/80 sm:text-base">
               Get expert guidance, compare universities and apply for your {shortLabel(course)} today!
             </p>
           </div>
           <Link
             href="/tools/course-finder"
-            className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-8 text-sm font-extrabold transition hover:-translate-y-0.5 hover:shadow-lg"
+            className="inline-flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-8 text-sm font-extrabold transition hover:-translate-y-0.5 hover:shadow-lg sm:w-auto"
             style={{ color: C.primary }}
           >
             Apply Now →
