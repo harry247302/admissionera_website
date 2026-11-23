@@ -442,7 +442,15 @@ function programmesFromTables(tables: CourseContentTable[]): UniversityCourse[] 
   });
 }
 
-function UniversityCourses({ courses, tables }: { courses: UniversityCourse[]; tables: CourseContentTable[] }) {
+function UniversityCourses({
+  courses,
+  tables,
+  intro,
+}: {
+  courses: UniversityCourse[];
+  tables: CourseContentTable[];
+  intro?: CourseContentParagraph;
+}) {
   const programmes = useMemo(() => {
     const fromTables = programmesFromTables(tables);
     const seen = new Set(courses.map((course) => course.name.trim().toLowerCase()));
@@ -468,8 +476,13 @@ function UniversityCourses({ courses, tables }: { courses: UniversityCourse[]; t
 
   return (
     <section id="courses" className="scroll-mt-28 rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5 sm:p-6">
-      <SectionHeading>Available UG & PG Online Programmes</SectionHeading>
-      {!programmes.length ? (
+      <SectionHeading>{intro?.title?.trim() || "Available UG & PG Online Programmes"}</SectionHeading>
+      {intro?.content ? (
+        <div className="mt-4">
+          <ReadMoreText content={intro.content} />
+        </div>
+      ) : null}
+      {/* {!programmes.length ? (
         <p className="mt-5 rounded-xl bg-[#F7F1FC] px-4 py-6 text-center text-sm text-[#686477]">
           Programmes will be updated soon.
         </p>
@@ -513,7 +526,7 @@ function UniversityCourses({ courses, tables }: { courses: UniversityCourse[]; t
             })}
           </div>
         </>
-      )}
+      )} */}
     </section>
   );
 }
@@ -573,9 +586,10 @@ export function UniversityDetailPage({
   blogs?: Blog[];
   suggestedCourses?: DiscoveryCourse[];
 }) {
-  console.log(university,"------------------")
   const paragraphs = university.paragraphs.filter((item) => item.title || stripPreview(item.content));
   const aboutParagraph = findParagraph(paragraphs, /about/i);
+  const highlightsParagraph = findParagraph(paragraphs, /highlight/i);
+  const programmesParagraph = findParagraph(paragraphs, /available.*(ug|pg)|online programme/i);
   const eligibilityParagraph = findParagraph(paragraphs, /eligib/i);
   const lmsParagraph = findParagraph(paragraphs, /lms|learning management/i);
   const examParagraph = findParagraph(paragraphs, /exam|evaluat/i);
@@ -659,20 +673,27 @@ export function UniversityDetailPage({
               </section>
             ) : null}
 
-            {statCards.length ? (
+            {statCards.length || highlightsParagraph ? (
               <section className="rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5 sm:p-6">
-                <SectionHeading>University Highlights</SectionHeading>
-                <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                  {statCards.map((card) => (
-                    <article key={card.label} className="rounded-2xl border border-[#EAE2F2] bg-[#F7F1FC] px-4 py-4 text-center">
-                      <span className="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#5412A5]">
-                        <card.Icon className="h-5 w-5" />
-                      </span>
-                      <p className="mt-2 text-[12px] font-semibold text-[#686477]">{card.label}</p>
-                      <p className="mt-1 text-[13px] font-extrabold leading-snug text-[#242033]">{card.value}</p>
-                    </article>
-                  ))}
-                </div>
+                <SectionHeading>{highlightsParagraph?.title?.trim() || "University Highlights"}</SectionHeading>
+                {/* {statCards.length ? (
+                  <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                    {statCards.map((card) => (
+                      <article key={card.label} className="rounded-2xl border border-[#EAE2F2] bg-[#F7F1FC] px-4 py-4 text-center">
+                        <span className="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#5412A5]">
+                          <card.Icon className="h-5 w-5" />
+                        </span>
+                        <p className="mt-2 text-[12px] font-semibold text-[#686477]">{card.label}</p>
+                        <p className="mt-1 text-[13px] font-extrabold leading-snug text-[#242033]">{card.value}</p>
+                      </article>
+                    ))}
+                  </div> */}
+                {/* ) : null} */}
+                {highlightsParagraph?.content ? (
+                  <div className={statCards.length ? "mt-5" : "mt-4"}>
+                    <ReadMoreText content={highlightsParagraph.content} />
+                  </div>
+                ) : null}
               </section>
             ) : null}
 
@@ -702,7 +723,7 @@ export function UniversityDetailPage({
               </section>
             ) : null}
 
-            <UniversityCourses courses={university.courses} tables={university.tables} />
+            <UniversityCourses courses={university.courses} tables={university.tables} intro={programmesParagraph} />
 
             <div className="grid gap-4 ">
               {eligibilityParagraph ? (
