@@ -307,7 +307,7 @@ function CourseCard({ course, index }: { course: HomeCourse; index: number }) {
   const href = courseFilterHref(course);
   const title = course.code ? `${course.studyMode} ${course.code}` : course.title;
   const count = course.universityCount;
-
+  console.log(course,"]]]]]]]]]]]]]]]]]]]]]]]");
   return (
     <Link
       href={href}
@@ -404,6 +404,7 @@ export function CourseFilterSection() {
       setCoursesError("");
       try {
         const data = await fetchDiscoveryCourses();
+        console.log(data,"]]]]]]]]]]]]]]]]]]]]]]]***************");
         if (!cancelled) setCourses(data);
       } catch (err) {
         if (!cancelled) {
@@ -423,12 +424,9 @@ export function CourseFilterSection() {
   const appliedFilters = draftFilters;
 
   const allCourses = useMemo<HomeCourse[]>(() => {
-    const catalogTitles = new Set(HOME_PG_COURSES.map((course) => course.title.toLowerCase()));
-    return [
-      ...HOME_PG_COURSES,
-      ...courses.filter((course) => !catalogTitles.has(course.title.toLowerCase())),
-    ];
-  }, [courses]);
+    if (courses.length) return courses;
+    return loadingCourses ? [] : HOME_PG_COURSES;
+  }, [courses, loadingCourses]);
 
   const filtered = useMemo(
     () => sortCourses(filterCourses(allCourses, appliedFilters), sortBy),

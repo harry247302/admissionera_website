@@ -558,8 +558,10 @@ export function sortCourses<T extends DiscoveryCourse>(courses: T[], sortBy: Sor
   }
 }
 
-const COURSES_API_URL = "https://backend.admissionera.com/api/academic/courses";
-const COURSES_SUMMARY_API_URL = "https://backend.admissionera.com/api/academic/courses-with-all-content";
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "https://backend.admissionera.com";
+const COURSES_API_URL = `${API_BASE}/api/academic/courses`;
+const COURSES_SUMMARY_API_URL = `${API_BASE}/api/academic/courses-with-all-content`;
 
 type ApiCourseSummary = {
   course_id?: string;
@@ -602,6 +604,8 @@ type ApiCourse = {
   attendanceMode?: string | null;
   language?: string | null;
   currency?: string | null;
+  slug?: string | null;
+  university_count?: string | number | null;
   is_active?: boolean;
   is_deleted?: boolean;
   status?: string | null;
@@ -791,10 +795,13 @@ export function mapApiCourseToDiscovery(row: ApiCourse, index = 0): DiscoveryCou
     ? row.course_content_paragraphs.length
     : 0;
 
+  const universityCount = Number(row.university_count);
+
   return {
     id: String(row.uuid || row.id || `${row.code || title}-${index}`),
     title,
     code: row.code?.trim() || "",
+    slug: row.slug?.trim() || undefined,
     description,
     category: mapApiCategory(row.department, title),
     level,
@@ -816,6 +823,7 @@ export function mapApiCourseToDiscovery(row: ApiCourse, index = 0): DiscoveryCou
     popularity: row.is_active === false || row.status === "INACTIVE" ? 40 : 80 + faqCount,
     reviewed: Math.max(specializations.length * 10, faqCount * 5, paragraphCount * 3),
     createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+    universityCount: Number.isFinite(universityCount) ? universityCount : undefined,
     keywords: [
       title,
       row.code || "",
@@ -929,18 +937,78 @@ function cryptoRandom() {
   return `tmp-${Math.random().toString(36).slice(2)}`;
 }
 
-export async function fetchDiscoveryCourses(): Promise<DiscoveryCourse[]> {
+function payloadRows(payload: unknown): unknown[] {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== "object") return [];
+  const record = payload as { data?: unknown; courses?: unknown };
+  const rows = record.data ?? record.courses;
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function fetchPagedApiCourses(): Promise<DiscoveryCourse[]> {
+  const courses: DiscoveryCourse[] = [];
+  let page = 1;
+  let pages = 1;
+  let index = 0;
+
+  while (page <= pages) {
+    const res = await fetch(`${COURSES_API_URL}?status=ACTIVE&limit=500&page=${page}`, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(payload?.message || `Failed to load courses (${res.status})`);
+    }
+
+    for (const row of payloadRows(payload) as ApiCourse[]) {
+      if (!row || row.is_deleted === true || row.is_active === false || row.status === "INACTIVE") {
+        continue;
+      }
+      courses.push(mapApiCourseToDiscovery(row, index));
+      index += 1;
+    }
+
+    pages = Math.max(1, Number(payload?.pagination?.pages) || 1);
+    page += 1;
+  }
+
+  return courses;
+}
+
+async function fetchCourseSummaries(): Promise<DiscoveryCourse[]> {
   const res = await fetch(COURSES_SUMMARY_API_URL, {
     headers: { Accept: "application/json" },
     cache: "no-store",
   });
+  if (!res.ok) return [];
+  const payload = await res.json().catch(() => null);
+  return payloadRows(payload).map((row, index) =>
+    mapApiCourseSummaryToDiscovery(row as ApiCourseSummary, index),
+  );
+}
 
-  if (!res.ok) {
-    throw new Error(`Failed to load courses (${res.status})`);
-  }
+export async function fetchDiscoveryCourses(): Promise<DiscoveryCourse[]> {
+  const [courses, summaries] = await Promise.all([
+    fetchPagedApiCourses(),
+    fetchCourseSummaries().catch(() => [] as DiscoveryCourse[]),
+  ]);
 
-  const payload = await res.json();
-return payload.data.map((row: ApiCourseSummary) => mapApiCourseSummaryToDiscovery(row));
+  const extraById = new Map(summaries.map((item) => [item.id, item]));
+
+  return courses.map((course) => {
+    const extra = extraById.get(course.id);
+    if (!extra) return course;
+    return {
+      ...course,
+      slug: extra.slug || course.slug,
+      universityCount: extra.universityCount ?? course.universityCount,
+      badge:
+        typeof extra.universityCount === "number"
+          ? `${extra.universityCount} ${extra.universityCount === 1 ? "University" : "Universities"}`
+          : course.badge,
+    };
+  });
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
