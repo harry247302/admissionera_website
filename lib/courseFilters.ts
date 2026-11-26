@@ -52,9 +52,14 @@ export type FilteredCourseRow = {
   university_name?: string;
   university_short_name?: string | null;
   university_logo?: string | null;
+  university_banner?: string | null;
   university_location?: string | null;
   university_rating?: string | number | null;
   university_world_rank?: number | null;
+  university_grade?: string | null;
+  university_type?: string | null;
+  university_approvals?: string[] | null;
+  university_brochure?: string | null;
   specialization_name?: string | null;
   duration?: string | number | null;
   duration_unit?: string | null;
@@ -62,6 +67,7 @@ export type FilteredCourseRow = {
   fee_amount?: string | number | null;
   fee_currency?: string | null;
   session_name?: string | null;
+  admission_status?: string | null;
 };
 
 export type FilteredCoursesResult = {
@@ -150,10 +156,11 @@ export async function fetchAllCourses(): Promise<CourseOption[]> {
       cache: "no-store",
     });
     const payload = await res.json().catch(() => null);
+
     if (!res.ok) {
       throw new Error(payload?.message || `Failed to load courses (${res.status})`);
     }
-
+    console.log( payload,"*********************************")
     const rows = Array.isArray(payload?.data) ? payload.data : [];
     for (const row of rows) {
       const name = String(row?.name || "").trim();
@@ -251,6 +258,19 @@ function mapFilteredRow(row: Record<string, unknown>): FilteredCourseRow {
   if (row.course_name || row.university_name) return row as FilteredCourseRow;
   const universities = Array.isArray(row.universities) ? row.universities : [];
   const university = (universities[0] || {}) as Record<string, unknown>;
+
+  // Extract fees: sum all fee amounts
+  const fees = Array.isArray(row.fees) ? (row.fees as Record<string, unknown>[]) : [];
+  const feeTotal = fees.reduce((sum, f) => sum + (Number(f.amount) || 0), 0);
+  const feeCurrency = fees[0] ? String(fees[0].currency || "INR") : (row.currency ? String(row.currency) : "INR");
+
+  // Extract approvals: university.approvals may be string[]
+  const rawApprovals = Array.isArray(university.approvals) ? university.approvals : [];
+  const approvals: string[] = rawApprovals.map((a) => (typeof a === "string" ? a : String((a as Record<string,unknown>).name || ""))).filter(Boolean);
+
+  // Duration from course or table
+  const durationVal = row.duration || null;
+
   return {
     course_uuid: row.uuid ? String(row.uuid) : undefined,
     course_name: row.name ? String(row.name) : undefined,
@@ -264,10 +284,22 @@ function mapFilteredRow(row: Record<string, unknown>): FilteredCourseRow {
     university_name: textList(universities, "name"),
     university_short_name: (university.short_name as string | null) ?? null,
     university_logo: (university.logo as string | null) ?? null,
+    university_banner: (university.banner as string | null) ?? null,
     university_location: (university.location as string | null) ?? null,
     university_rating: (university.ratings as string | number | null) ?? null,
     university_world_rank: (university.world_rank as number | null) ?? null,
+    university_grade: (university.grade as string | null) ?? null,
+    university_type: (university.type as string | null) ?? null,
+    university_approvals: approvals.length > 0 ? approvals : null,
+    university_brochure: (university.brochure as string | null) ?? null,
     specialization_name: textList(row.specializations, "name"),
+    duration: durationVal ? String(durationVal) : null,
+    duration_unit: null,
+    fee_uuid: undefined,
+    fee_amount: feeTotal > 0 ? String(feeTotal) : null,
+    fee_currency: feeCurrency,
+    session_name: null,
+    admission_status: (university.admission_status as string | null) ?? null,
   };
 }
 

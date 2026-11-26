@@ -581,6 +581,201 @@ function FAQSection({ faqs, name }: { faqs: CourseFaq[]; name: string }) {
   );
 }
 
+type ApiCourse = {
+  name: string;
+  degree: string | null;
+  level: string | null;
+  code: string | null;
+  slug: string | null;
+  study_mode: string | null;
+};
+
+const COURSES_API_BASE = "https://backend.admissionera.com/api/courses/courses";
+
+function levelBadge(level: string | null) {
+  if (!level) return null;
+  const upper = level.toUpperCase();
+  const isUG = upper.includes("UNDER") || upper === "UG";
+  const isPG = upper.includes("POST") || upper === "PG";
+  const label = isUG ? "UG" : isPG ? "PG" : level;
+  const cls = isUG
+    ? "bg-[#EEF6FF] text-[#1D6FBF] border border-[#BFD9F5]"
+    : isPG
+    ? "bg-[#F0FBF0] text-[#1A7A3A] border border-[#B5E5C2]"
+    : "bg-[#F7F1FC] text-[#5412A5] border border-[#D5C2F0]";
+  return (
+    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold leading-4 ${cls}`}>
+      {label}
+    </span>
+  );
+}
+
+function modeBadge(mode: string | null) {
+  if (!mode) return <span className="text-[#686477]">—</span>;
+  const isOnline = mode.toUpperCase().includes("ONLINE");
+  return (
+    <span
+      className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold leading-4 ${
+        isOnline
+          ? "bg-[#F7F1FC] text-[#5412A5] border border-[#D5C2F0]"
+          : "bg-[#FFF3E0] text-[#B45309] border border-[#FBBF24]"
+      }`}
+    >
+      {mode}
+    </span>
+  );
+}
+
+function TopRatedCoursesTable({
+  universityName,
+  universityUuid,
+}: {
+  universityName: string;
+  universityUuid: string;
+}) {
+  const [courses, setCourses] = useState<ApiCourse[]>([]);
+  const [state, setState] = useState<"loading" | "done" | "error">("loading");
+
+  useEffect(() => {
+    if (!universityUuid) return;
+    const controller = new AbortController();
+    const apiUrl = `${COURSES_API_BASE}/${encodeURIComponent(universityUuid)}`;
+    fetch(apiUrl, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error(String(res.status));
+        return res.json();
+      })
+      .then((data) => {
+        const raw: ApiCourse[] = Array.isArray(data) ? data : [];
+        // Deduplicate by code + level combination
+        const seen = new Set<string>();
+        const unique = raw.filter((c) => {
+          const key = `${c.code ?? ""}|${c.level ?? ""}|${c.study_mode ?? ""}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setCourses(unique);
+        setState("done");
+      })
+      .catch((err) => {
+        if (err?.name !== "AbortError") setState("error");
+      });
+    return () => controller.abort();
+  }, [universityUuid]);
+
+  if (state === "done" && courses.length === 0) return null;
+
+  return (
+    <section
+      id="top-courses"
+      className="scroll-mt-28 overflow-hidden rounded-[1.15rem] border border-[#EAE2F2] bg-white"
+    >
+      {/* Header */}
+      <div className="flex items-center gap-3 border-b border-[#EAE2F2] bg-gradient-to-r from-[#F7F1FC] to-white px-5 py-4">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#5412A5]/10">
+          <svg className="h-4 w-4 text-[#5412A5]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path d="M12 14l9-5-9-5-9 5 9 5z" />
+            <path d="M12 14l6.16-3.422A12.083 12.083 0 0 1 20 17c0 2.21-3.582 4-8 4s-8-1.79-8-4c0-1.166.436-2.26 1.84-3.422L12 14z" />
+          </svg>
+        </div>
+        <div>
+          <h2 className="text-[15px] font-bold text-[#242033]">
+            Top High Rated Courses In{" "}
+            <span className="text-[#5412A5]">{universityName}</span>
+          </h2>
+          {state === "done" && (
+            <p className="text-[11px] text-[#686477]">{courses.length} course{courses.length !== 1 ? "s" : ""} available</p>
+          )}
+        </div>
+      </div>
+
+      {/* Loading Skeleton */}
+      {state === "loading" && (
+        <div className="p-5 space-y-2 animate-pulse">
+          <div className="h-9 w-full rounded bg-[#F7F1FC]" />
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-10 w-full rounded bg-[#F7F1FC]/60" />
+          ))}
+        </div>
+      )}
+
+      {/* Error */}
+      {state === "error" && (
+        <div className="flex flex-col items-center gap-2 py-10 text-center">
+          <svg className="h-8 w-8 text-[#EAE2F2]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8v4m0 4h.01" />
+          </svg>
+          <p className="text-sm font-medium text-[#686477]">Unable to load courses right now</p>
+          <p className="text-xs text-[#9A93A8]">Please try refreshing the page.</p>
+        </div>
+      )}
+
+      {/* Table */}
+      {state === "done" && (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px] border-collapse text-left text-sm">
+            <thead>
+              <tr className="bg-[#F7F1FC]">
+                <th className="border-b border-[#EAE2F2] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#5412A5]">
+                  #
+                </th>
+                <th className="border-b border-[#EAE2F2] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#5412A5]">
+                  Course Name
+                </th>
+                <th className="border-b border-[#EAE2F2] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#5412A5]">
+                  Degree
+                </th>
+                <th className="border-b border-[#EAE2F2] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#5412A5]">
+                  Level
+                </th>
+                <th className="border-b border-[#EAE2F2] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#5412A5]">
+                  Code
+                </th>
+                <th className="border-b border-[#EAE2F2] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#5412A5]">
+                  Study Mode
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {courses.map((course, index) => (
+                <tr
+                  key={`${course.code}-${course.level}-${index}`}
+                  className={`border-b border-[#EAE2F2] transition-colors last:border-0 hover:bg-[#F7F1FC]/60 ${
+                    index % 2 === 0 ? "bg-white" : "bg-[#FDFBFF]"
+                  }`}
+                >
+                  <td className="px-4 py-3 text-xs font-semibold text-[#9A93A8]">
+                    {String(index + 1).padStart(2, "0")}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="font-semibold text-[#242033]">{course.name}</span>
+                  </td>
+                  <td className="px-4 py-3 text-[#686477]">
+                    {course.degree?.trim() || <span className="text-[#9A93A8]">—</span>}
+                  </td>
+                  <td className="px-4 py-3">{levelBadge(course.level)}</td>
+                  <td className="px-4 py-3">
+                    {course.code ? (
+                      <span className="rounded bg-[#F0EDF8] px-2 py-0.5 text-xs font-mono font-semibold text-[#5412A5]">
+                        {course.code}
+                      </span>
+                    ) : (
+                      <span className="text-[#9A93A8]">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">{modeBadge(course.study_mode)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function UniversityDetailPage({
   university,
   blogs = [],
@@ -592,7 +787,6 @@ export function UniversityDetailPage({
 }) {
   const paragraphs = university.paragraphs.filter((item) => item.title || stripPreview(item.content));
   const aboutParagraph = findParagraph(paragraphs, /about/i);
-  console.log(university,"++++++++++++++++");
   const highlightsParagraph = findParagraph(paragraphs, /highlight/i);
   const programmesParagraph = findParagraph(paragraphs, /available.*(ug|pg)|online programme/i);
   const eligibilityParagraph = findParagraph(paragraphs, /eligib/i);
@@ -774,14 +968,9 @@ export function UniversityDetailPage({
                 </section>
               ) : null}
             </div>
-
             <RegularVsOnlineTable universityName={university.name} />
-              <div>
-              <section id="eligibility" className="scroll-mt-28 rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5">
-                  <SectionHeading>Top High Rated Courses In {university.name}</SectionHeading>
-                  
-                </section>
-              </div>
+
+            <TopRatedCoursesTable universityName={university.name} universityUuid={university.uuid} />
             {(university.companies.length || university.recruiters.length) ? (
               <section className="rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5 sm:p-6">
                 <SectionHeading>Top Recruiters</SectionHeading>
