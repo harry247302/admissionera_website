@@ -14,13 +14,17 @@ import {
   ChevronDown,
   ClipboardCheck,
   Download,
+  Clock3,
   GraduationCap,
   Headset,
   Laptop,
   MapPin,
+  MonitorPlay,
   Phone,
+  Scale,
   User,
   Users,
+  Wallet,
 } from "lucide-react";
 import type { Blog } from "@/lib/blogs";
 import { formatBlogDate, resolveBlogImageUrl } from "@/lib/blogs";
@@ -588,6 +592,7 @@ export function UniversityDetailPage({
 }) {
   const paragraphs = university.paragraphs.filter((item) => item.title || stripPreview(item.content));
   const aboutParagraph = findParagraph(paragraphs, /about/i);
+  console.log(university,"++++++++++++++++");
   const highlightsParagraph = findParagraph(paragraphs, /highlight/i);
   const programmesParagraph = findParagraph(paragraphs, /available.*(ug|pg)|online programme/i);
   const eligibilityParagraph = findParagraph(paragraphs, /eligib/i);
@@ -707,22 +712,23 @@ export function UniversityDetailPage({
                   {university.approvals.map((item) => (
                     <article key={item.id} className="flex flex-col items-center rounded-2xl border border-[#EAE2F2] bg-white p-4 text-center shadow-sm">
                       {item.logo ? (
-                        <Image src={item.logo} alt={item.name} width={72} height={72} className="h-14 w-14 object-contain" unoptimized />
+                        <Image src={item.logo} alt={item.name} width={72} height={72} className="" unoptimized />
                       ) : (
                         <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#F7F1FC] text-[#5412A5]">
                           <Award className="h-7 w-7" />
                         </span>
                       )}
-                      <p className="mt-3 text-[13px] font-extrabold text-[#242033]">{item.name}</p>
+                      {/* <p className="mt-3 text-[13px] font-extrabold text-[#242033]">{item.name}</p>
                       <p className="mt-1 text-[11px] leading-4 text-[#686477]">
                         {item.description || APPROVAL_BLURB[item.name] || "Recognised approval body"}
-                      </p>
+                      </p> */}
                     </article>
                   ))}
                 </div>
               </section>
             ) : null}
-
+            
+            <RegularVsOnlineTable universityName={university.name} />
             <UniversityCourses courses={university.courses} tables={university.tables} intro={programmesParagraph} />
 
             <div className="grid gap-4 ">
@@ -768,7 +774,12 @@ export function UniversityDetailPage({
                 </section>
               ) : null}
             </div>
-
+              <div>
+              <section id="eligibility" className="scroll-mt-28 rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5">
+                  <SectionHeading>Top High Rated Courses In {university.name}</SectionHeading>
+                  
+                </section>
+              </div>
             {(university.companies.length || university.recruiters.length) ? (
               <section className="rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5 sm:p-6">
                 <SectionHeading>Top Recruiters</SectionHeading>
@@ -895,5 +906,112 @@ export function UniversityDetailPage({
         </div>
       </section>
     </main>
+  );
+}
+
+const COMPARISON_ROWS = [
+  {
+    label: "Learning Mode",
+    Icon: Laptop,
+    regular: "Classroom-based, physical attendance",
+    online: "100% online, learn from anywhere",
+  },
+  {
+    label: "Flexibility",
+    Icon: Calendar,
+    regular: "Fixed schedule, less flexible",
+    online: "Highly flexible, study at your own pace",
+  },
+  {
+    label: "Class Delivery",
+    Icon: MonitorPlay,
+    regular: "Live classes on campus",
+    online: "Live + recorded classes, anytime access",
+  },
+  {
+    label: "Program Duration",
+    Icon: Clock3,
+    regular: "Typically 2 years (MBA)",
+    online: "2 years (MBA) – as per UGC guidelines",
+  },
+  {
+    label: "Eligibility",
+    Icon: User,
+    regular: "Bachelor’s degree from a recognized university",
+    online: "Bachelor’s degree from a recognized university",
+  },
+  {
+    label: "Recognition",
+    Icon: Award,
+    regular: "UGC recognized",
+    online: "UGC Entitled & NAAC A+ Accredited",
+  },
+  {
+    label: "Cost",
+    Icon: Wallet,
+    regular: "Generally higher (tuition + hostel + other costs)",
+    online: "More affordable and cost-effective",
+  },
+  {
+    label: "Career Value",
+    Icon: Briefcase,
+    regular: "Good for traditional and location-specific roles",
+    online: "Equally valid, widely accepted by employers",
+  },
+];
+
+function RegularVsOnlineTable({ universityName }: { universityName: string }) {
+  return (
+    <section className="overflow-hidden rounded-[10px] border border-[#5B2A9A] bg-white shadow-sm">
+      {/* <div
+        className="flex items-center justify-center gap-2 px-4 py-3 text-center text-white"
+        style={{ background: `linear-gradient(90deg, #5A1FA8 0%, ${C.primary} 55%, #6D28D9 100%)` }}
+      >
+        <Scale className="h-5 w-5 shrink-0 text-[#F6C445]" />
+        <h2 className="text-[15px] font-extrabold leading-snug sm:text-lg">
+          Difference Between <span className="text-[#F6C445]">Regular University</span> Vs{" "}
+          <span className="text-[#F6C445]">Online University</span> Degree Program
+        </h2>
+      </div> */}
+
+<div className="overflow-x-auto rounded-[10px] border border-[#E4D8F2] bg-white shadow-sm">
+  <table className="w-full  border-collapse text-left text-sm">
+    <thead>
+      <tr className="border-b border-[#E4D8F2] bg-[#F4EEFB]">
+        <th className="w-[22%] px-5 py-4 text-xs font-bold uppercase tracking-wide text-[#5B21B6]">
+          Parameters
+        </th>
+        <th className="w-[39%] px-5 py-4 text-xs font-bold uppercase tracking-wide text-[#5B21B6]">
+          Regular University Degree (On-Campus)
+        </th>
+        <th className="bg-[#5B21B6] px-5 py-4 text-xs font-bold uppercase tracking-wide text-white">
+          Online University Degree
+        </th>
+      </tr>
+    </thead>
+
+    <tbody className="divide-y divide-[#EEE6F7]">
+      {COMPARISON_ROWS.map((row) => (
+        <tr key={row.label} className="">
+          <td className="px-5 py-4 align-top font-semibold text-[#2A2140]">
+            <span className="inline-flex text-[12px] items-center gap-2.5">
+              <span className="flex shrink-0 items-center justify-center rounded-md bg-[#F4EEFB]">
+                <row.Icon className="h-4 w-4 text-[#5B21B6]" />
+              </span>
+              {row.label}
+            </span>
+          </td>
+          <td className="px-5 py-4 align-top text-[12px] leading-relaxed text-[#6B6480]">
+            {row.regular}
+          </td>
+          <td className="bg-[#FAF7FD] px-5 py-4 text-[12px] align-top font-medium leading-relaxed text-[#2A2140] group-hover:bg-[#F4EEFB]">
+            {row.online}
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+    </section>
   );
 }

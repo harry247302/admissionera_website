@@ -202,27 +202,53 @@ function resolveCompanyLogo(logo = "", website = "") {
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`;
 }
 
-function prettyApprovalName(name = "") {
-  const withoutExt = name.replace(/\.(jpe?g|png|webp|svg|gif)$/i, "");
-  const cleaned = withoutExt.replace(/logo/gi, " ").replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
-  if (!cleaned) return "";
-  const plus = cleaned
-    .replace(/\ba plus plus\b/i, "A++")
-    .replace(/\ba plus\b/i, "A+")
-    .replace(/\ba\+\+\b/i, "A++");
-  const acronyms: Record<string, string> = {
-    aiu: "AIU",
-    aicte: "AICTE",
-    ugc: "UGC",
-    nirf: "NIRF",
-    deb: "DEB",
-    naac: "NAAC",
-  };
-  return plus
-    .split(" ")
-    .filter(Boolean)
-    .map((word) => acronyms[word.toLowerCase()] || word)
-    .join(" ");
+function mapBackendApprovals(raw: unknown): UniversityApproval[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.flatMap((item, index) => {
+    if (typeof item === "string") {
+      const file = item.trim();
+      if (!file) return [];
+      const isImage = /\.(jpe?g|png|webp|svg|gif)$/i.test(file);
+      return [{
+        id: file,
+        name: isImage
+          ? file
+            .replace(/\.[^.]+$/, "")
+            .replace(/[-_]?logo[-_]?/gi, " ")
+            .replace(/[-_]a[-_]plus[-_]plus/gi, " A++")
+            .replace(/[-_]a[-_]plus/gi, " A+")
+            .replace(/[-_]/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .toUpperCase()
+          : file,
+        logo: isImage
+          ? resolveMediaUrl(file.startsWith("/") ? file : `/uploads/approvals/${file}`)
+          : "",
+        description: "",
+      }];
+    }
+
+    if (!item || typeof item !== "object") return [];
+    const record = item as Record<string, unknown>;
+    const logoRaw = String(record.approval_logo ?? record.logo ?? "");
+    const name = String(record.approval_name ?? record.name ?? "").trim();
+    const logo = logoRaw
+      ? resolveMediaUrl(
+        /^https?:\/\//i.test(logoRaw) || logoRaw.startsWith("/")
+          ? logoRaw
+          : `/uploads/approvals/${logoRaw}`,
+      )
+      : "";
+    if (!name && !logo) return [];
+    return [{
+      id: String(record.id ?? record.uuid ?? index),
+      name,
+      logo,
+      description: String(record.approval_description ?? record.description ?? ""),
+    }];
+  });
 }
 
 function extractEstablished(text: string) {
@@ -332,6 +358,31 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
+
+export type UniversityCourse = {
+  course_uuid: string;
+  name: string;
+  code: string | null;
+  level: string | null;
+  degree?: string | null;
+  slug?: string | null;
+  study_mode?: string | null;
+};
+
+export async function fetchUniversityCourses(uuid: string): Promise<UniversityCourse[]> {
+  const id = encodeURIComponent(uuid);
+
+  const response = await fetchJson<UniversityCourse[] | { data?: UniversityCourse[] }>(
+    `${ACADEMIC_API_URL}/courses/${id}`
+  );
+
+  // Backend returns a plain array, but accept { data: [...] } too
+  const rows = Array.isArray(response) ? response : response?.data ?? [];
+
+  // A course can have several fee rows (different specializations or sessions), so keep each once
+  return Array.from(new Map(rows.map((r) => [r.uuid ?? r.code, r])).values());
+}
+
 export async function fetchUniversityDetail(uuid: string): Promise<UniversityDetail> {
   const id = encodeURIComponent(uuid);
 
@@ -354,22 +405,7 @@ export async function fetchUniversityDetail(uuid: string): Promise<UniversityDet
   const career = parseRichHtml(row.career);
   const listEntry = allUniversities.find((uni) => uni.uuid === row.uuid);
 
-  // approvals is string[] in the new API (e.g. ["UGC", "AICTE", "NAAC A++"])
-  const rawApprovals = Array.isArray(row.approvals) ? (row.approvals as unknown[]) : [];
-  const approvals: UniversityApproval[] = rawApprovals
-    .map((item, idx) => {
-      if (typeof item === "string") {
-        return { id: String(idx), name: prettyApprovalName(item), logo: "", description: "" };
-      }
-      const obj = item as Record<string, unknown>;
-      return {
-        id: String(obj.id ?? idx),
-        name: prettyApprovalName(String(obj.approval_name ?? obj.name ?? "")),
-        logo: resolveMediaUrl(obj.approval_logo as string ?? ""),
-        description: String(obj.approval_description ?? obj.description ?? ""),
-      };
-    })
-    .filter((item) => item.name);
+  const approvals = mapBackendApprovals(row.approvals);
 
   // faqs embedded in the unified response
   const rawFaqs = Array.isArray(row.faqs) ? (row.faqs as Record<string, unknown>[]) : [];
