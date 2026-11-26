@@ -359,7 +359,7 @@ async function fetchJson<T>(url: string): Promise<T | null> {
 }
 
 
-export type UniversityCourse = {
+export type UniversityCourseDetails = {
   course_uuid: string;
   name: string;
   code: string | null;

@@ -728,7 +728,7 @@ export function UniversityDetailPage({
               </section>
             ) : null}
             
-            <RegularVsOnlineTable universityName={university.name} />
+          
             <UniversityCourses courses={university.courses} tables={university.tables} intro={programmesParagraph} />
 
             <div className="grid gap-4 ">
@@ -774,6 +774,8 @@ export function UniversityDetailPage({
                 </section>
               ) : null}
             </div>
+
+            <RegularVsOnlineTable universityName={university.name} />
               <div>
               <section id="eligibility" className="scroll-mt-28 rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5">
                   <SectionHeading>Top High Rated Courses In {university.name}</SectionHeading>
