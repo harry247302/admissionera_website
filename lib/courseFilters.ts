@@ -160,7 +160,6 @@ export async function fetchAllCourses(): Promise<CourseOption[]> {
     if (!res.ok) {
       throw new Error(payload?.message || `Failed to load courses (${res.status})`);
     }
-    console.log( payload,"*********************************")
     const rows = Array.isArray(payload?.data) ? payload.data : [];
     for (const row of rows) {
       const name = String(row?.name || "").trim();

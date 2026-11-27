@@ -325,7 +325,15 @@ export async function fetchBlogs(params?: FetchBlogsParams): Promise<{
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to fetch blogs from API: HTTP ${res.status}`);
+      // Return an empty fallback directly — no throw — so the outer catch
+      // never fires and the build/ISR revalidation degrades silently.
+      const severity = res.status >= 500 ? "warn" : "error";
+      console[severity](`fetchBlogs: upstream returned HTTP ${res.status} – serving empty list`);
+      return {
+        blogs: [],
+        pagination: { total: 0, page: params?.page ?? 1, limit: params?.limit ?? 12, totalPages: 0 },
+        allCategories: [],
+      };
     }
 
     const json: BlogsApiResponse = await res.json();

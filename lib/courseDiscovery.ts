@@ -1033,7 +1033,6 @@ export async function fetchCourseById(idOrSlug: string): Promise<CourseDetail> {
   }
 
   const payload = await res.json();
-  console.log("payload", payload);
   const row = payload?.data || payload?.course;
   if (!row) {
     throw new Error("Course not found");

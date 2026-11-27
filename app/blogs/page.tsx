@@ -54,7 +54,7 @@ export default async function BlogsPage() {
     includeArchived: true, // fetch all so client can derive categories; client filters to published
     limit: 200,
   });
-  console.log(blogs,"*----------------")
+
 
   return (
     <main id="main">

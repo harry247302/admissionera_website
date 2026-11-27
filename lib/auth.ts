@@ -107,7 +107,6 @@ function toAuthUser(value: unknown): AuthUser | null {
 }
 
 export async function verifyCurrentUser() {
-  console.log(VERIFY_USER_API_URL,"++++++++++++++++++++++++");
   const res = await fetch(VERIFY_USER_API_URL, {
     method: "GET",
     headers: { Accept: "application/json" },
@@ -117,6 +116,5 @@ export async function verifyCurrentUser() {
   if (!res.ok) return null;
   
   const payload = (await res.json().catch(() => ({}))) as { user?: unknown };
-  console.log(payload,"++++++++++++++++++++++++");
   return toAuthUser(payload.user);
 }
