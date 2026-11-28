@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -581,13 +581,20 @@ function FAQSection({ faqs, name }: { faqs: CourseFaq[]; name: string }) {
   );
 }
 
+type ApiSpecialization = {
+  specialization_name: string;
+  currency: string | null;
+  amount: number | null;
+};
+
 type ApiCourse = {
-  name: string;
   degree: string | null;
   level: string | null;
+  duration: string | null;
   code: string | null;
   slug: string | null;
   study_mode: string | null;
+  specializations: ApiSpecialization[];
 };
 
 const COURSES_API_BASE = "https://backend.admissionera.com/api/courses/courses";
@@ -626,6 +633,171 @@ function modeBadge(mode: string | null) {
   );
 }
 
+function CourseRow({ course, index }: { course: ApiCourse; index: number }) {
+  const [open, setOpen] = useState(false);
+  const [dropPos, setDropPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const specs = course.specializations ?? [];
+  const hasSpecs = specs.length > 0;
+
+  const formatFee = (amount: number | null, currency: string | null) => {
+    if (!amount) return null;
+    const sym = currency?.toUpperCase() === "INR" ? "₹" : (currency ?? "");
+    return `${sym}${amount.toLocaleString("en-IN")}`;
+  };
+
+  // Position dropdown below the button using fixed coords (escapes overflow clipping)
+  const openMenu = () => {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    setDropPos({
+      top: rect.bottom + 6,
+      left: rect.left,
+      width: 320,
+    });
+    setOpen(true);
+  };
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        btnRef.current && !btnRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  // Close on scroll (position would drift)
+  useEffect(() => {
+    if (!open) return;
+    const handler = () => setOpen(false);
+    window.addEventListener("scroll", handler, true);
+    return () => window.removeEventListener("scroll", handler, true);
+  }, [open]);
+
+  return (
+    <tr
+      className={`border-b border-[#EAE2F2] transition-colors hover:bg-[#F7F1FC]/40 ${
+        index % 2 === 0 ? "bg-white" : "bg-[#FDFBFF]"
+      }`}
+    >
+      {/* # */}
+      <td className="px-4 py-3.5 text-xs font-semibold text-[#9A93A8]">
+        {String(index + 1).padStart(2, "0")}
+      </td>
+
+      {/* Code */}
+      <td className="px-4 py-3.5">
+        <span className="font-semibold text-[#242033]">{course.code || "—"}</span>
+      </td>
+
+      {/* Level */}
+      <td className="px-4 py-3.5">{levelBadge(course.level)}</td>
+
+      {/* Duration */}
+      <td className="px-4 py-3.5 text-sm text-[#686477]">
+        {course.duration ?? <span className="text-[#C4BDD4]">—</span>}
+      </td>
+
+      {/* Study Mode */}
+      <td className="px-4 py-3.5">{modeBadge(course.study_mode)}</td>
+
+      {/* Specializations — fixed-position dropdown */}
+      <td className="px-4 py-3.5">
+        {hasSpecs ? (
+          <>
+            <button
+              ref={btnRef}
+              onClick={() => (open ? setOpen(false) : openMenu())}
+              className="flex items-center gap-1.5 rounded-full bg-[#F7F1FC] px-3 py-1 text-[11px] font-semibold text-[#5412A5] transition hover:bg-[#EDE4FB]"
+            >
+              <span>{specs.length} spec{specs.length !== 1 ? "s" : ""}</span>
+              <svg
+                className={`h-3 w-3 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+                fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"
+              >
+                <path d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {open && dropPos && (
+              <div
+                ref={menuRef}
+                style={{
+                  position: "fixed",
+                  top: dropPos.top,
+                  left: dropPos.left,
+                  width: dropPos.width,
+                  zIndex: 9999,
+                }}
+                className="overflow-hidden rounded-xl border border-[#EAE2F2] bg-white shadow-[0_8px_32px_rgba(84,18,165,0.14)]"
+              >
+                {/* Menu header */}
+                <div className="flex items-center justify-between border-b border-[#EAE2F2] bg-[#F7F1FC] px-3 py-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-[#5412A5]">
+                    Specializations
+                  </span>
+                  <button
+                    onClick={() => setOpen(false)}
+                    className="rounded p-0.5 text-[#9A93A8] transition hover:text-[#5412A5]"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path d="M18 6 6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* List */}
+                <ul className="max-h-64 divide-y divide-[#F0EBF9] overflow-y-auto">
+                  {specs.map((spec, si) => {
+                    const fee = formatFee(spec.amount, spec.currency);
+                    return (
+                      <li
+                        key={si}
+                        className="flex items-start justify-between gap-3 px-3 py-2.5 hover:bg-[#FAF8FF]"
+                      >
+                        <div className="flex min-w-0 items-start gap-2">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#7022AD]" />
+                          <span className="line-clamp-3 text-[12px] font-medium leading-snug text-[#3D2068]">
+                            {spec.specialization_name}
+                          </span>
+                        </div>
+                        <div className="shrink-0">
+                          {fee ? (
+                            <span className="inline-flex items-center gap-0.5 rounded-full border border-[#D5C2F0] bg-[#F7F1FC] px-2 py-0.5 text-[10px] font-semibold text-[#5412A5]">
+                              {fee}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-[#C4BDD4]">On request</span>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+          </>
+        ) : (
+          <span className="text-xs text-[#C4BDD4]">—</span>
+        )}
+      </td>
+
+      {/* View */}
+      <td className="px-4 py-3.5">
+        <a href="" className="text-xs font-semibold text-[#5412A5] hover:underline">View</a>
+      </td>
+    </tr>
+  );
+}
+
 function TopRatedCoursesTable({
   universityName,
   universityUuid,
@@ -647,7 +819,7 @@ function TopRatedCoursesTable({
       })
       .then((data) => {
         const raw: ApiCourse[] = Array.isArray(data) ? data : [];
-        // Deduplicate by code + level combination
+        // Deduplicate by code + level + study_mode
         const seen = new Set<string>();
         const unique = raw.filter((c) => {
           const key = `${c.code ?? ""}|${c.level ?? ""}|${c.study_mode ?? ""}`;
@@ -663,6 +835,9 @@ function TopRatedCoursesTable({
       });
     return () => controller.abort();
   }, [universityUuid]);
+
+  // Count total specializations for subtitle
+  const totalSpecs = courses.reduce((n, c) => n + (c.specializations?.length ?? 0), 0);
 
   if (state === "done" && courses.length === 0) return null;
 
@@ -685,17 +860,21 @@ function TopRatedCoursesTable({
             <span className="text-[#5412A5]">{universityName}</span>
           </h2>
           {state === "done" && (
-            <p className="text-[11px] text-[#686477]">{courses.length} course{courses.length !== 1 ? "s" : ""} available</p>
+            <p className="text-[11px] text-[#686477]">
+              {courses.length} course{courses.length !== 1 ? "s" : ""}
+              {totalSpecs > 0 && ` · ${totalSpecs} specialization${totalSpecs !== 1 ? "s" : ""}`}
+              {" · Click a row to expand specializations"}
+            </p>
           )}
         </div>
       </div>
 
       {/* Loading Skeleton */}
       {state === "loading" && (
-        <div className="p-5 space-y-2 animate-pulse">
+        <div className="animate-pulse space-y-2 p-5">
           <div className="h-9 w-full rounded bg-[#F7F1FC]" />
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-10 w-full rounded bg-[#F7F1FC]/60" />
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-12 w-full rounded bg-[#F7F1FC]/60" />
           ))}
         </div>
       )}
@@ -715,58 +894,22 @@ function TopRatedCoursesTable({
       {/* Table */}
       {state === "done" && (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[600px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[700px] border-collapse text-left text-sm">
             <thead>
               <tr className="bg-[#F7F1FC]">
-                <th className="border-b border-[#EAE2F2] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#5412A5]">
-                  #
-                </th>
-                <th className="border-b border-[#EAE2F2] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#5412A5]">
-                  Course Name
-                </th>
-                <th className="border-b border-[#EAE2F2] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#5412A5]">
-                  Degree
-                </th>
-                <th className="border-b border-[#EAE2F2] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#5412A5]">
-                  Level
-                </th>
-                <th className="border-b border-[#EAE2F2] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#5412A5]">
-                  Code
-                </th>
-                <th className="border-b border-[#EAE2F2] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#5412A5]">
-                  Study Mode
-                </th>
+                {["#", "Degree / Code", "Level", "Duration", "Study Mode", "Specializations","View"].map((h) => (
+                  <th
+                    key={h}
+                    className="border-b border-[#EAE2F2] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[#5412A5]"
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {courses.map((course, index) => (
-                <tr
-                  key={`${course.code}-${course.level}-${index}`}
-                  className={`border-b border-[#EAE2F2] transition-colors last:border-0 hover:bg-[#F7F1FC]/60 ${
-                    index % 2 === 0 ? "bg-white" : "bg-[#FDFBFF]"
-                  }`}
-                >
-                  <td className="px-4 py-3 text-xs font-semibold text-[#9A93A8]">
-                    {String(index + 1).padStart(2, "0")}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="font-semibold text-[#242033]">{course.name}</span>
-                  </td>
-                  <td className="px-4 py-3 text-[#686477]">
-                    {course.degree?.trim() || <span className="text-[#9A93A8]">—</span>}
-                  </td>
-                  <td className="px-4 py-3">{levelBadge(course.level)}</td>
-                  <td className="px-4 py-3">
-                    {course.code ? (
-                      <span className="rounded bg-[#F0EDF8] px-2 py-0.5 text-xs font-mono font-semibold text-[#5412A5]">
-                        {course.code}
-                      </span>
-                    ) : (
-                      <span className="text-[#9A93A8]">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">{modeBadge(course.study_mode)}</td>
-                </tr>
+                <CourseRow key={`${course.code}-${course.level}-${index}`} course={course} index={index} />
               ))}
             </tbody>
           </table>
@@ -788,6 +931,7 @@ export function UniversityDetailPage({
   const paragraphs = university.paragraphs.filter((item) => item.title || stripPreview(item.content));
   const aboutParagraph = findParagraph(paragraphs, /about/i);
   const highlightsParagraph = findParagraph(paragraphs, /highlight/i);
+  console.log(university)
   const programmesParagraph = findParagraph(paragraphs, /available.*(ug|pg)|online programme/i);
   const eligibilityParagraph = findParagraph(paragraphs, /eligib/i);
   const lmsParagraph = findParagraph(paragraphs, /lms|learning management/i);
@@ -922,7 +1066,8 @@ export function UniversityDetailPage({
               </section>
             ) : null}
             
-          
+             <RegularVsOnlineTable universityName={university.name} />
+
             <UniversityCourses courses={university.courses} tables={university.tables} intro={programmesParagraph} />
 
             <div className="grid gap-4 ">
@@ -968,37 +1113,69 @@ export function UniversityDetailPage({
                 </section>
               ) : null}
             </div>
-            <RegularVsOnlineTable universityName={university.name} />
-
+         
             <TopRatedCoursesTable universityName={university.name} universityUuid={university.uuid} />
-            {(university.companies.length || university.recruiters.length) ? (
-              <section className="rounded-[1.15rem] border border-[#EAE2F2] bg-white p-5 sm:p-6">
-                <SectionHeading>Top Recruiters</SectionHeading>
-                <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                  {(university.companies.length
-                    ? university.companies
-                    : university.recruiters.map((name) => ({ uuid: name, name, logo: "", website: "" }))
-                  ).map((company) => {
-                    const cardClass = "flex flex-col items-center rounded-2xl border border-[#EAE2F2] bg-[#F7F1FC] px-3 py-4 transition hover:border-[#5412A5]/30";
-                    const inner = (
-                      <>
-                        <CompanyMark name={company.name} logo={company.logo} />
-                        <span className="mt-2 line-clamp-2 text-center text-[12px] font-semibold leading-4 text-[#242033]">{company.name}</span>
-                      </>
-                    );
-                    return company.website ? (
-                      <a key={company.uuid || company.name} href={company.website} target="_blank" rel="noreferrer" className={cardClass}>
-                        {inner}
-                      </a>
-                    ) : (
-                      <div key={company.uuid || company.name} className={cardClass}>
-                        {inner}
-                      </div>
-                    );
-                  })}
+            <ExploreCoursesSection />
+            
+{(university.companies.length || university.recruiters.length) ? (
+  <section className="overflow-hidden rounded-[1.15rem] border border-[#EAE2F2] bg-white py-5 sm:py-6">
+    <div className="px-5 sm:px-6">
+      <SectionHeading>Top Recruiters</SectionHeading>
+    </div>
+
+    <div className="mt-5 overflow-hidden">
+      <div className="recruiter-marquee flex w-max gap-4">
+        {[...Array(2)].map((_, index) => (
+          <div key={index} className="flex shrink-0 gap-4">
+            {(university.companies.length
+              ? university.companies
+              : university.recruiters.map((name) => ({
+                  uuid: name,
+                  name,
+                  logo: "",
+                  website: "",
+                }))
+            ).map((company, i) => {
+              const cardClass =
+                "flex w-[145px] shrink-0 flex-col items-center justify-center rounded-2xl border border-[#EAE2F2] bg-[#F7F1FC] px-3 py-4 transition hover:border-[#5412A5]/40 hover:bg-white";
+
+              const inner = (
+                <>
+                  <CompanyMark
+                    name={company.name}
+                    logo={company.logo}
+                  />
+                  <span className="mt-2 line-clamp-2 text-center text-[12px] font-semibold leading-4 text-[#242033]">
+                    {company.name}
+                  </span>
+                </>
+              );
+
+              return company.website ? (
+                <a
+                  key={`${index}-${company.uuid || company.name}-${i}`}
+                  href={company.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={cardClass}
+                >
+                  {inner}
+                </a>
+              ) : (
+                <div
+                  key={`${index}-${company.uuid || company.name}-${i}`}
+                  className={cardClass}
+                >
+                  {inner}
                 </div>
-              </section>
-            ) : null}
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+) : null}
 
             <FAQSection faqs={activeFaqs} name={university.name} />
           </div>
@@ -1150,6 +1327,96 @@ const COMPARISON_ROWS = [
     online: "Equally valid, widely accepted by employers",
   },
 ];
+
+const EXPLORE_COURSES = {
+  left: [
+    { label: "MBA Course Online",       href: "/courses/filtered?search=MBA" },
+    { label: "MTech Course Online",     href: "/courses/filtered?search=MTech" },
+    { label: "MSc Course Online",       href: "/courses/filtered?search=MSc" },
+    { label: "BBA Course Online",       href: "/courses/filtered?search=BBA" },
+    { label: "BTech Course Online",     href: "/courses/filtered?search=BTech" },
+    { label: "BSc Course Online",       href: "/courses/filtered?search=BSc" },
+    { label: "1-year MBA Online",       href: "/courses/filtered?search=1+year+MBA" },
+    { label: "Job-Linked Programs",     href: "/courses/filtered?search=Job+Linked" },
+  ],
+  right: [
+    { label: "MCA Course Online",                  href: "/courses/filtered?search=MCA" },
+    { label: "MCom Course Online",                 href: "/courses/filtered?search=MCom" },
+    { label: "MA Course Online",                   href: "/courses/filtered?search=MA" },
+    { label: "BCA Course Online",                  href: "/courses/filtered?search=BCA" },
+    { label: "BCom Course Online",                 href: "/courses/filtered?search=BCom" },
+    { label: "BA Course Online",                   href: "/courses/filtered?search=BA" },
+    { label: "Global MBA Online",                  href: "/courses/filtered?search=Global+MBA" },
+    { label: "Pay After Placement Programs",       href: "/courses/filtered?search=Pay+After+Placement" },
+  ],
+};
+
+function CourseListItem({ label, href }: { label: string; href: string }) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 transition hover:border-[#EAE2F2] hover:bg-[#F7F1FC]"
+    >
+      <GraduationCap className="h-4 w-4 shrink-0 text-[#5412A5]" />
+      <span className="flex-1 text-[13px] text-[#242033] group-hover:text-[#5412A5]">{label}</span>
+      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#9A93A8] transition group-hover:text-[#5412A5]" />
+    </Link>
+  );
+}
+
+function ExploreCoursesSection() {
+  return (
+    <section className="overflow-hidden rounded-[1.15rem] border border-[#EAE2F2] bg-white">
+      {/* Header */}
+      <div className="flex items-center gap-2.5 border-b border-[#EAE2F2] bg-[#F7F1FC] px-5 py-3.5">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#5412A5]/10">
+          <GraduationCap className="h-4 w-4 text-[#5412A5]" />
+        </div>
+        <h2 className="text-[14px] font-bold text-[#242033]">
+          Explore Online Learning Courses In India
+        </h2>
+      </div>
+
+      {/* Two-column course grid */}
+      <div className="grid grid-cols-1 divide-y divide-[#EAE2F2] sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+        <div className="flex flex-col gap-0.5 p-3">
+          {EXPLORE_COURSES.left.map((item) => (
+            <CourseListItem key={item.label} {...item} />
+          ))}
+        </div>
+        <div className="flex flex-col gap-0.5 p-3">
+          {EXPLORE_COURSES.right.map((item) => (
+            <CourseListItem key={item.label} {...item} />
+          ))}
+        </div>
+      </div>
+
+      {/* Footer CTAs */}
+      <div className="grid grid-cols-1 divide-y divide-[#EAE2F2] border-t border-[#EAE2F2] sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+        <Link
+          href="/courses/filtered"
+          className="group flex items-center gap-3 px-4 py-3 transition hover:bg-[#F7F1FC]"
+        >
+          <Laptop className="h-4 w-4 shrink-0 text-[#5412A5]" />
+          <span className="flex-1 text-[12px] font-medium text-[#686477] group-hover:text-[#5412A5]">
+            Explore more online and distance courses in India!
+          </span>
+          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#9A93A8] group-hover:text-[#5412A5]" />
+        </Link>
+        <Link
+          href="/universities"
+          className="group flex items-center gap-3 px-4 py-3 transition hover:bg-[#F7F1FC]"
+        >
+          <Building2 className="h-4 w-4 shrink-0 text-[#5412A5]" />
+          <span className="flex-1 text-[12px] font-medium text-[#686477] group-hover:text-[#5412A5]">
+            Click here for all approved distance and online universities in India!
+          </span>
+          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#9A93A8] group-hover:text-[#5412A5]" />
+        </Link>
+      </div>
+    </section>
+  );
+}
 
 function RegularVsOnlineTable({ universityName }: { universityName: string }) {
   return (
